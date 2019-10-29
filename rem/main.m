@@ -13,7 +13,7 @@
 
 #define MYNAME @"rem"
 
-#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"help", @"version" ]
+#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"help", @"version" ]
 typedef enum _CommandType {
     CMD_UNKNOWN = -1,
     CMD_LS = 0,
@@ -21,6 +21,7 @@ typedef enum _CommandType {
     CMD_RM,
     CMD_CAT,
     CMD_DONE,
+    CMD_EVERY, // list everything
     CMD_HELP,
     CMD_VERSION
 } CommandType;
@@ -75,11 +76,12 @@ static void _version()
 static void _usage()
 {
     _print(stdout, @"Usage:\n");
-    _print(stdout, @"\t%@ [ls] <list>\n\t\tList reminders\n",MYNAME);
+    _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ rm <list> <reminder>\n\t\tRemove reminder from list\n",MYNAME);
     _print(stdout, @"\t%@ add <reminder>\n\t\tAdd reminder to your default list\n",MYNAME);
     _print(stdout, @"\t%@ cat <list> <item>\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item>\n\t\tMark reminder as complete\n",MYNAME);
+    _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\t(Note: commands can be like \"ls\" or \"--ls\" or \"-l\".)\n",MYNAME);
@@ -219,7 +221,7 @@ static NSDictionary* sortReminders(NSArray *reminders)
  */
 static void validateArguments()
 {
-    if (command == CMD_LS && calendar == nil)
+    if ((command == CMD_LS || command == CMD_EVERY) && calendar == nil)
         return;
 
     if (command == CMD_ADD)
@@ -231,7 +233,7 @@ static void validateArguments()
         exit(-1);
     }
 
-    if (command == CMD_LS && reminder_id == nil)
+    if ((command == CMD_LS || command == CMD_EVERY) && reminder_id == nil)
         return;
 
     NSInteger r_id = [reminder_id integerValue] - 1;
@@ -286,6 +288,52 @@ static void _printReminderLine(NSUInteger id, NSString *line, BOOL last, BOOL la
 }
 
 /*!
+    @function showReminder
+    @param showTitle
+        should the title be shown or should we indent
+    @param lastReminder
+        is this the last reminder being diplayed?
+    @param lastCalendar
+        does this reminder belong to last calendar being displayed?
+    @abstract show reminder details
+    @description show reminder details: creation date, last modified date (if different than
+        creation date), start date (if defined), due date (if defined), notes (if defined)
+ */
+static void showReminder(BOOL showTitle, BOOL lastReminder, BOOL lastCalendar)
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateStyle:NSDateFormatterShortStyle];
+    
+    NSString *indent = (lastCalendar) ? SPACER : PIPER;
+    NSString *prefix = (lastReminder) ? SPACER : PIPER;
+    indent = showTitle ? @"\t" : [[indent stringByAppendingString:prefix] stringByAppendingString:@"        "];
+
+    if (showTitle)
+        _print(stdout, @"Reminder: %@\n", reminder.title);
+    _print(stdout, @"%@List: %@\n", indent, reminder.calendar.title);
+
+    _print(stdout, @"%@Created On: %@\n", indent, [dateFormatter stringFromDate:reminder.creationDate]);
+
+    if (reminder.lastModifiedDate != reminder.creationDate) {
+        _print(stdout, @"%@Last Modified On: %@\n", indent, [dateFormatter stringFromDate:reminder.lastModifiedDate]);
+    }
+
+    NSDate *startDate = [reminder.startDateComponents date];
+    if (startDate) {
+        _print(stdout, @"%@Started On: %@\n", indent, [dateFormatter stringFromDate:startDate]);
+    }
+
+    NSDate *dueDate = [reminder.dueDateComponents date];
+    if (dueDate) {
+        _print(stdout, @"%@Due On: %@\n", indent, [dateFormatter stringFromDate:dueDate]);
+    }
+
+    if (reminder.hasNotes) {
+        _print(stdout, @"%@Notes: %@\n", indent, reminder.notes);
+    }
+}
+
+/*!
     @function _listCalendar
     @abstract output a calaendar and its reminders
     @param cal
@@ -296,13 +344,18 @@ static void _printReminderLine(NSUInteger id, NSString *line, BOOL last, BOOL la
         _printCalendarLine. Retrieve the calendars reminders and display via _printReminderLine.
         Each reminder is prepended with an index/id for other commands
  */
-static void _listCalendar(NSString *cal, BOOL last)
+static void _listCalendar(NSString *cal, BOOL last, BOOL withDetails)
 {
     _printCalendarLine(cal, last);
     NSArray *reminders = [calendars valueForKey:cal];
     for (NSUInteger i = 0; i < reminders.count; i++) {
         EKReminder *r = [reminders objectAtIndex:i];
-        _printReminderLine(i+1, r.title, (r == [reminders lastObject]), last);
+        BOOL isLastReminder = (r == [reminders lastObject]);
+        _printReminderLine(i+1, r.title, isLastReminder, last);
+        if (withDetails) {
+            reminder = r;
+            showReminder(NO,isLastReminder,last);
+        }
     }
 }
 
@@ -312,15 +365,15 @@ static void _listCalendar(NSString *cal, BOOL last)
     @description list all reminders if no calendar (reminder list) specified,
         or list reminders in specified calendar
  */
-static void listReminders()
+static void listReminders(BOOL withDetails)
 {
     _print(stdout, @"Reminders\n");
     if (calendar) {
-        _listCalendar(calendar, YES);
+        _listCalendar(calendar, YES, withDetails);
     }
     else {
         for (NSString *cal in calendars) {
-            _listCalendar(cal, (cal == [[calendars allKeys] lastObject]));
+            _listCalendar(cal, (cal == [[calendars allKeys] lastObject]), withDetails);
         }
     }
 }
@@ -358,41 +411,6 @@ static void removeReminder()
 }
 
 /*!
-    @function showReminder
-    @abstract show reminder details
-    @description show reminder details: creation date, last modified date (if different than
-        creation date), start date (if defined), due date (if defined), notes (if defined)
- */
-static void showReminder()
-{
-    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-    [dateFormatter setDateStyle:NSDateFormatterShortStyle];
-
-    _print(stdout, @"Reminder: %@\n", reminder.title);
-    _print(stdout, @"\tList: %@\n", calendar);
-
-    _print(stdout, @"\tCreated On: %@\n", [dateFormatter stringFromDate:reminder.creationDate]);
-
-    if (reminder.lastModifiedDate != reminder.creationDate) {
-        _print(stdout, @"\tLast Modified On: %@\n", [dateFormatter stringFromDate:reminder.lastModifiedDate]);
-    }
-
-    NSDate *startDate = [reminder.startDateComponents date];
-    if (startDate) {
-        _print(stdout, @"\tStarted On: %@\n", [dateFormatter stringFromDate:startDate]);
-    }
-
-    NSDate *dueDate = [reminder.dueDateComponents date];
-    if (dueDate) {
-        _print(stdout, @"\tDue On: %@\n", [dateFormatter stringFromDate:dueDate]);
-    }
-
-    if (reminder.hasNotes) {
-        _print(stdout, @"\tNotes: %@\n", reminder.notes);
-    }
-}
-
-/*!
     @function completeReminder
     @abstract mark specified reminder as complete
     @description mark specified reminder as complete
@@ -416,7 +434,8 @@ static void handleCommand()
 {
     switch (command) {
         case CMD_LS:
-            listReminders();
+        case CMD_EVERY:
+            listReminders(command==CMD_EVERY);
             break;
         case CMD_ADD:
             addReminder();
@@ -425,7 +444,7 @@ static void handleCommand()
             removeReminder();
             break;
         case CMD_CAT:
-            showReminder();
+            showReminder(YES,YES,YES);
             break;
         case CMD_DONE:
             completeReminder();
