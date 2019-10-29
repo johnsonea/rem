@@ -9,6 +9,8 @@
 #import <Foundation/Foundation.h>
 #import <EventKit/EventKit.h>
 
+#define MYNAME @"rem"
+
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"help", @"version" ]
 typedef enum _CommandType {
     CMD_UNKNOWN = -1,
@@ -61,7 +63,7 @@ static void _print(FILE *file, NSString *format, ...)
  */
 static void _version()
 {
-    _print(stdout, @"rem Version 0.01\n");
+    _print(stdout, @"%@ Version 0.01eaj\n",MYNAME);
 }
 
 /*!
@@ -71,20 +73,14 @@ static void _version()
 static void _usage()
 {
     _print(stdout, @"Usage:\n");
-    _print(stdout, @"\trem <ls> [list]\n");
-    _print(stdout, @"\t\tList reminders\n");
-    _print(stdout, @"\trem rm [list] [reminder]\n");
-    _print(stdout, @"\t\tRemove reminder from list\n");
-    _print(stdout, @"\trem add [reminder]\n");
-    _print(stdout, @"\t\tAdd reminder to your default list\n");
-    _print(stdout, @"\trem cat [list] [item]\n");
-    _print(stdout, @"\t\tShow reminder detail\n");
-    _print(stdout, @"\trem done [list] [item]\n");
-    _print(stdout, @"\t\tMark reminder as complete\n");
-    _print(stdout, @"\trem help\n");
-    _print(stdout, @"\t\tShow this text\n");
-    _print(stdout, @"\trem version\n");
-    _print(stdout, @"\t\tShow version information\n");
+    _print(stdout, @"\t%@ [ls] <list>\n\t\tList reminders\n",MYNAME);
+    _print(stdout, @"\t%@ rm <list> <reminder>\n\t\tRemove reminder from list\n",MYNAME);
+    _print(stdout, @"\t%@ add <reminder>\n\t\tAdd reminder to your default list\n",MYNAME);
+    _print(stdout, @"\t%@ cat <list> <item>\n\t\tShow reminder detail\n",MYNAME);
+    _print(stdout, @"\t%@ done <list> <item>\n\t\tMark reminder as complete\n",MYNAME);
+    _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
+    _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
+    _print(stdout, @"\t(Note: commands can be like \"ls\" or \"--ls\" or \"-l\".)\n",MYNAME);
 }
 
 /*!
@@ -104,9 +100,25 @@ static void parseArguments()
         return;
 
     NSString *cmd = [args objectAtIndex:0];
+    
+    // allow --ls in addition to ls, etc.
+    if ([cmd hasPrefix:@"--"]) {
+        cmd = [cmd substringFromIndex:[@"--" length]];
+    }
     command = (CommandType)[COMMANDS indexOfObject:cmd];
+    
+    // allow -l in addition to ls and --ls
+    if (command == CMD_UNKNOWN && [cmd hasPrefix:@"-"] && [(cmd = [cmd substringFromIndex:[@"-" length]]) length]>0) {
+        for (NSString *aCommand in COMMANDS) {
+            if ([aCommand hasPrefix:cmd]) {
+                command = (CommandType)[COMMANDS indexOfObject:aCommand];
+                break;
+            }
+        }
+    }
+    
     if (command == CMD_UNKNOWN) {
-        _print(stderr, @"rem: Error unknown command %@", cmd);
+        _print(stderr, @"%@: Error unknown command %@", MYNAME, cmd);
         _usage();
         exit(-1);
     }
@@ -213,7 +225,7 @@ static void validateArguments()
 
     NSUInteger calendar_id = [[calendars allKeys] indexOfObject:calendar];
     if (calendar_id == NSNotFound) {
-        _print(stderr, @"rem: Error - Unknown Reminder List: \"%@\"\n", calendar);
+        _print(stderr, @"%@: Error - Unknown Reminder List: \"%@\"\n", MYNAME, calendar);
         exit(-1);
     }
 
@@ -223,7 +235,7 @@ static void validateArguments()
     NSInteger r_id = [reminder_id integerValue] - 1;
     NSArray *reminders = [calendars objectForKey:calendar];
     if (r_id < 0 || r_id > reminders.count-1) {
-        _print(stderr, @"rem: Error - ID Out of Range for Reminder List: %@\n", calendar);
+        _print(stderr, @"%@: Error - ID Out of Range for Reminder List: %@\n", MYNAME, calendar);
         exit(-1);
     }
     reminder = [reminders objectAtIndex:r_id];
@@ -325,7 +337,7 @@ static void addReminder()
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
-        _print(stderr, @"rem: Error adding Reminder (%@)\n\t%@", reminder_id, [error localizedDescription]);
+        _print(stderr, @"%@: Error adding Reminder (%@)\n\t%@", MYNAME, reminder_id, [error localizedDescription]);
     }
 }
 
@@ -339,7 +351,7 @@ static void removeReminder()
     NSError *error;
     BOOL success = [store removeReminder:reminder commit:YES error:&error];
     if (!success) {
-        _print(stderr, @"rem: Error removing Reminder (%@) from list %@\n\t%@", reminder_id, calendar, [error localizedDescription]);
+        _print(stderr, @"%@: Error removing Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
     }
 }
 
@@ -389,7 +401,7 @@ static void completeReminder()
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
-        _print(stderr, @"rem: Error marking Reminder (%@) from list %@\n\t%@", reminder_id, calendar, [error localizedDescription]);
+        _print(stderr, @"%@: Error marking Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
     }
 }
 
