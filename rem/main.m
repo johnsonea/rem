@@ -30,7 +30,7 @@ typedef enum _CommandType {
 
 static CommandType command;
 static NSString *calendar;
-static NSString *reminder_id;
+static NSString *reminder_id = nil;
 
 static EKEventStore *store;
 static NSDictionary *calendars;
@@ -216,35 +216,45 @@ static NSDictionary* sortReminders(NSArray *reminders)
 /*!
     @function validateArguments
     @abstract Verfy the (reminder) list and reminder_id command-line arguments
+    @returns an exit status (0 for no error)
     @description If provided, verify that the (reminder) list and reminder_id
         command-line arguments are valid. Compare the (reminder) list to the keys
         of the calendars dictionary. Verify the integer value of the reminder_id
         is within the index range of the appropriate calendar array.
  */
-static void validateArguments()
+static int validateArguments()
 {
     if ((command == CMD_LS || command == CMD_EVERY) && calendar == nil)
-        return;
+        return 0;
 
     if (command == CMD_ADD)
-        return;
+        return 0;
 
     NSUInteger calendar_id = [[calendars allKeys] indexOfObject:calendar];
     if (calendar_id == NSNotFound) {
         _print(stderr, @"%@: Error - Unknown Reminder List: \"%@\"\n", MYNAME, calendar);
-        exit(-1);
+        return 10;
     }
 
     if ((command == CMD_LS || command == CMD_EVERY) && reminder_id == nil)
-        return;
+        return 0;
 
+    if (reminder_id == nil) {
+        _print(stderr, @"%@: Error - no reminder # provided for Reminder List: %@\n", MYNAME, calendar);
+        return 11;
+    }
     NSInteger r_id = [reminder_id integerValue] - 1;
     NSArray *reminders = [calendars objectForKey:calendar];
+    if (reminders.count < 1) {
+        _print(stderr, @"%@: Error - there are no reminders in Reminder List: %@\n", MYNAME, calendar);
+        return 12;
+    }
     if (r_id < 0 || r_id > reminders.count-1) {
-        _print(stderr, @"%@: Error - ID Out of Range for Reminder List: %@\n", MYNAME, calendar);
-        exit(-1);
+        _print(stderr, @"%@: Error - ID Out of Range [1,%@] for Reminder List: %@\n", MYNAME, @(reminders.count), calendar);
+        return 13;
     }
     reminder = [reminders objectAtIndex:r_id];
+    return 0;
 }
 
 /*!
@@ -410,9 +420,10 @@ static void listReminders(BOOL withDetails)
 /*!
     @function addReminder
     @abstract add a reminder
+    @returns an exit status (0 for no error)
     @description add a reminder to the default calendar
  */
-static void addReminder()
+static int addReminder()
 {
     reminder = [EKReminder reminderWithEventStore:store];
     reminder.calendar = [store defaultCalendarForNewReminders];
@@ -422,44 +433,53 @@ static void addReminder()
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
         _print(stderr, @"%@: Error adding Reminder (%@)\n\t%@", MYNAME, reminder_id, [error localizedDescription]);
+        return 20;
     }
+    return 0;
 }
 
 /*!
     @function removeReminder
     @abstract remove a specified reminder
+    @returns an exit status (0 for no error)
     @description remove a specified reminder
  */
-static void removeReminder()
+static int removeReminder()
 {
     NSError *error;
     BOOL success = [store removeReminder:reminder commit:YES error:&error];
     if (!success) {
         _print(stderr, @"%@: Error removing Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
+        return 21;
     }
+    return 0;
 }
 
 /*!
     @function completeReminder
     @abstract mark specified reminder as complete
+    @returns an exit status (0 for no error)
     @description mark specified reminder as complete
  */
-static void completeReminder()
+static int completeReminder()
 {
     reminder.completed = YES;
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
         _print(stderr, @"%@: Error marking Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
+        return 22;
     }
+    return 0;
 }
 
 /*!
     @function handleCommand
     @abstract dispatch to correct function based on command-line argument
+    @returns an exit status (0 for no error)
     @description dispatch to correct function based on command-line argument
  */
-static void handleCommand()
+static int handleCommand()
 {
     switch (command) {
         case CMD_LS:
@@ -467,41 +487,47 @@ static void handleCommand()
             listReminders(command==CMD_EVERY);
             break;
         case CMD_ADD:
-            addReminder();
+            return addReminder();
             break;
         case CMD_RM:
-            removeReminder();
+            return removeReminder();
             break;
         case CMD_CAT:
             showReminder(YES,YES,YES);
             break;
         case CMD_DONE:
-            completeReminder();
+            return completeReminder();
             break;
         case CMD_HELP:
         case CMD_VERSION:
         case CMD_UNKNOWN:
             break;
     }
-
+    return 0;
 }
 
-int main(int argc, const char * argv[])
-{
+int main(int argc, const char * argv[]) {
+    int exitStatus = 0;
 
     @autoreleasepool {
         parseArguments();
 
         store = [[EKEventStore alloc] initWithAccessToEntityTypes:EKEntityMaskReminder];
+        if (store == nil) {
+            _print(stderr, @"%@: Unable to access the Reminders storage\n", MYNAME);
+            exitStatus = 1;
+        } else {
+            
+            if (command != CMD_ADD) {
+                NSArray *reminders = fetchReminders();
+                calendars = sortReminders(reminders);
+            }
 
-        if (command != CMD_ADD) {
-            NSArray *reminders = fetchReminders();
-            calendars = sortReminders(reminders);
+            exitStatus = validateArguments();
+            if (exitStatus == 0)
+                exitStatus = handleCommand();
         }
-
-        validateArguments();
-        handleCommand();
     }
-    return 0;
+    return exitStatus;
 }
 
