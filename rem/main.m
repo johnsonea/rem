@@ -13,6 +13,7 @@
 #import "EKAlarm+stringWith.h"
 #import "EKEventStore+Synchronous.h"
 #import "errors.h"
+#import "EKReminder+Snoozing.h"
 
 /*
  TO DO:
@@ -23,6 +24,7 @@
 
 #define MYNAME @"rem"
 #define SHOW_NEW_DETAILS 1
+#define REMINDER_TITLE_PREFIX @"-"
 
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
@@ -90,7 +92,7 @@ static void _usage()
 {
     _print(stdout, @"Usage:\n");
     _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ rm <list> <reminder>\n\t\tRemove reminder from list\n",MYNAME);
+    _print(stdout, @"\t%@ rm <list> <item>\n\t\tRemove reminder from list\n",MYNAME);
     _print(stdout, @"\t%@ add <reminder>\n\t\tAdd reminder to your default list\n",MYNAME);
     _print(stdout, @"\t%@ cat <list> <item>\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item>\n\t\tMark reminder as complete\n",MYNAME);
@@ -98,7 +100,8 @@ static void _usage()
     _print(stdout, @"\t%@ snooze <list> <item> <seconds>\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
-    _print(stdout, @"\t(Note: commands can be like \"ls\" or \"--ls\" or \"-l\".)\n",MYNAME);
+    _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n",MYNAME);
+    _print(stdout, @"\tNote: <item> is an integer, or a dash followed by a reminder title.\n",MYNAME);
 }
 
 /*!
@@ -261,17 +264,36 @@ static int validateArguments()
         _print(stderr, @"%@: Error - no reminder # provided for Reminder List: %@\n", MYNAME, calendar);
         return EXIT_INVARG_NOID;
     }
-    NSInteger r_id = [reminder_id integerValue] - 1;
+    
     NSArray *reminders = [calendars objectForKey:calendar];
     if (reminders.count < 1) {
         _print(stderr, @"%@: Error - there are no reminders in Reminder List: %@\n", MYNAME, calendar);
         return EXIT_INVARG_EMPTYCALENDAR;
     }
-    if (r_id < 0 || r_id > reminders.count-1) {
-        _print(stderr, @"%@: Error - ID Out of Range [1,%@] for Reminder List: %@\n", MYNAME, @(reminders.count), calendar);
-        return EXIT_INVARG_IDRANGE;
+    if ([reminder_id hasPrefix:REMINDER_TITLE_PREFIX]) {
+        // try to find the reminder by title
+        __block NSString *title = [reminder_id substringFromIndex:[REMINDER_TITLE_PREFIX length]];
+        NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title == %@",title];
+        predicate = [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
+            return [[(EKReminder*)object title] isEqualToString:title] && (command!=CMD_SNOOZE || [(EKReminder*)object snoozing]);
+        }];
+        NSArray *filteredReminders = [reminders filteredArrayUsingPredicate:predicate];
+        if (filteredReminders == nil || filteredReminders.count == 0) {
+            _print(stderr, @"%@: Error - there are no reminders titled \"%@\" in List %@\n", MYNAME, title, calendar);
+            return EXIT_INVARG_BADTITLE;
+        } else if (filteredReminders.count > 1) {
+            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\" in List %@ -- do not know which one to snooze\n", MYNAME, @(filteredReminders.count), title, calendar);
+            return EXIT_INVARG_BADTITLE;
+        }
+        reminder = filteredReminders[0];
+    } else {
+        NSInteger r_id = [reminder_id integerValue] - 1;
+        if (r_id < 0 || r_id > reminders.count-1) {
+            _print(stderr, @"%@: Error - ID Out of Range [1,%@] for Reminder List: %@\n", MYNAME, @(reminders.count), calendar);
+            return EXIT_INVARG_IDRANGE;
+        }
+        reminder = [reminders objectAtIndex:r_id];
     }
-    reminder = [reminders objectAtIndex:r_id];
     
     if (command == CMD_SNOOZE && snooze_seconds == nil) {
         _print(stderr, @"%@: need # of seconds to snooze\n", MYNAME);
@@ -515,7 +537,7 @@ static int snoozeReminder()
     NSUInteger nChanged = 0;
     NSMutableArray<EKAlarm*> *alarms = [reminder.alarms mutableCopy];
     NSTimeInterval secs = [snooze_seconds integerValue];
-    NSLog(@"secs = %@",@(secs));
+    // NSLog(@"secs = %@",@(secs));
     for (NSUInteger i=0; i<alarms.count; i++) {
         if ([alarms[i] snoozing]) {
             alarms[i] = [alarms[i] duplicateAlarmChangingTimeToNowPlusSecs:secs];
