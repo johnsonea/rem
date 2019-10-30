@@ -10,8 +10,10 @@
 
 #import <Foundation/Foundation.h>
 #import <EventKit/EventKit.h>
+#import "EKAlarm+stringWith.h"
 
 #define MYNAME @"rem"
+#define SHOW_NEW_DETAILS 1
 
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"help", @"version" ]
 typedef enum _CommandType {
@@ -297,12 +299,20 @@ static void _printReminderLine(NSUInteger id, NSString *line, BOOL last, BOOL la
         does this reminder belong to last calendar being displayed?
     @abstract show reminder details
     @description show reminder details: creation date, last modified date (if different than
-        creation date), start date (if defined), due date (if defined), notes (if defined)
+        creation date), start date (if defined), due date (if defined), completed date (if completed),
+        priority, local ID, recurrence rules (if any), alarms (if any), notes (if defined)
  */
 static void showReminder(BOOL showTitle, BOOL lastReminder, BOOL lastCalendar)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     [dateFormatter setDateStyle:NSDateFormatterShortStyle];
+    
+    NSDateFormatter *dateFormatterShortDateLongTime = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateStyle:NSDateFormatterShortStyle];
+    dateFormatterShortDateLongTime = [[NSDateFormatter alloc] init];
+    dateFormatterShortDateLongTime.dateStyle = NSDateFormatterShortStyle;
+    dateFormatterShortDateLongTime.timeStyle = NSDateFormatterLongStyle;
+    dateFormatterShortDateLongTime.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
     
     NSString *indent = (lastCalendar) ? SPACER : PIPER;
     NSString *prefix = (lastReminder) ? SPACER : PIPER;
@@ -326,6 +336,25 @@ static void showReminder(BOOL showTitle, BOOL lastReminder, BOOL lastCalendar)
     NSDate *dueDate = [reminder.dueDateComponents date];
     if (dueDate) {
         _print(stdout, @"%@Due On: %@\n", indent, [dateFormatter stringFromDate:dueDate]);
+    }
+
+    if (SHOW_NEW_DETAILS) {
+        if (reminder.completed) {
+            NSString *completedDateStr = reminder.completionDate ? [dateFormatter stringFromDate:reminder.completionDate] : @"yes";
+            _print(stdout, @"%@Completed: %@\n", indent, completedDateStr);
+        }
+        _print(stdout, @"%@Priority: %@\n", indent, [NSString stringWithFormat:@"%@",@(reminder.priority)]);
+        _print(stdout, @"%@Local ID: %@\n", indent, reminder.calendarItemIdentifier);
+        if (reminder.hasRecurrenceRules && reminder.recurrenceRules) {
+            for (NSUInteger i=0; i<reminder.recurrenceRules.count; i++) {
+                _print(stdout, @"%@Recurrence Rule %@: %@\n", indent, @(i+1), reminder.recurrenceRules[i].description); // NOTE: .description is decent though could make it more humanly readable
+            }
+        }
+        if (reminder.hasAlarms && reminder.alarms) {
+            for (NSUInteger i=0; i<reminder.alarms.count; i++) {
+                _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [reminder.alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime]);
+            }
+        }
     }
 
     if (reminder.hasNotes) {
