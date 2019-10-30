@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0C6441CA23690DF800F3366A /* EKAlarm+stringWith.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C6441C923690DF800F3366A /* EKAlarm+stringWith.m */; };
+		0C6441CD2369217200F3366A /* EKEventStore+Synchronous.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C6441CC2369217200F3366A /* EKEventStore+Synchronous.m */; };
 		E5C96A3B16261A4A00611642 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E5C96A3A16261A4A00611642 /* Foundation.framework */; };
 		E5C96A3E16261A4A00611642 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E5C96A3D16261A4A00611642 /* main.m */; };
 		E5C96A4216261A4A00611642 /* rem.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = E5C96A4116261A4A00611642 /* rem.1 */; };
@@ -30,6 +31,9 @@
 /* Begin PBXFileReference section */
 		0C6441C823690DF800F3366A /* EKAlarm+stringWith.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EKAlarm+stringWith.h"; sourceTree = "<group>"; };
 		0C6441C923690DF800F3366A /* EKAlarm+stringWith.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "EKAlarm+stringWith.m"; sourceTree = "<group>"; };
+		0C6441CB2369217200F3366A /* EKEventStore+Synchronous.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EKEventStore+Synchronous.h"; sourceTree = "<group>"; };
+		0C6441CC2369217200F3366A /* EKEventStore+Synchronous.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "EKEventStore+Synchronous.m"; sourceTree = "<group>"; };
+		0C6441CE236923B500F3366A /* errors.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = errors.h; sourceTree = "<group>"; };
 		E5467EA1162F3AFB00676892 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		E5467EA3162F3CD600676892 /* README.asciidoc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.asciidoc; sourceTree = "<group>"; };
 		E5C96A3616261A4A00611642 /* rem */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = rem; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,6 +89,9 @@
 			isa = PBXGroup;
 			children = (
 				E5C96A3D16261A4A00611642 /* main.m */,
+				0C6441CB2369217200F3366A /* EKEventStore+Synchronous.h */,
+				0C6441CC2369217200F3366A /* EKEventStore+Synchronous.m */,
+				0C6441CE236923B500F3366A /* errors.h */,
 				0C6441C823690DF800F3366A /* EKAlarm+stringWith.h */,
 				0C6441C923690DF800F3366A /* EKAlarm+stringWith.m */,
 				E5C96A4116261A4A00611642 /* rem.1 */,
@@ -153,6 +160,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C6441CD2369217200F3366A /* EKEventStore+Synchronous.m in Sources */,
 				0C6441CA23690DF800F3366A /* EKAlarm+stringWith.m in Sources */,
 				E5C96A3E16261A4A00611642 /* main.m in Sources */,
 			);

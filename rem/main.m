@@ -11,6 +11,8 @@
 #import <Foundation/Foundation.h>
 #import <EventKit/EventKit.h>
 #import "EKAlarm+stringWith.h"
+#import "EKEventStore+Synchronous.h"
+#import "errors.h"
 
 #define MYNAME @"rem"
 #define SHOW_NEW_DETAILS 1
@@ -27,20 +29,6 @@ typedef enum _CommandType {
     CMD_HELP,
     CMD_VERSION
 } CommandType;
-
-typedef enum _ExitStatus {
-    EXIT_CLEAN = 99,
-    EXIT_NORMAL = 0,
-    EXIT_FAIL_REMINDERS,
-    EXIT_CMD_UNKNOWN,
-    EXIT_INVARG_NOSUCHCALENDAR,
-    EXIT_INVARG_NOID,
-    EXIT_INVARG_EMPTYCALENDAR,
-    EXIT_INVARG_IDRANGE,
-    EXIT_FAIL_ADD,
-    EXIT_FAIL_RM,
-    EXIT_FAIL_COMPLETE,
-} ExitStatus;
 
 static CommandType command;
 static NSString *calendar;
@@ -526,23 +514,30 @@ int main(int argc, const char * argv[]) {
 
     @autoreleasepool {
         exitStatus = parseArguments();
-        if (exitStatus == 0) {
-            
-            store = [[EKEventStore alloc] initWithAccessToEntityTypes:EKEntityMaskReminder];
-            if (store == nil) {
-                _print(stderr, @"%@: Unable to access the Reminders storage\n", MYNAME);
-                exitStatus = EXIT_FAIL_REMINDERS;
-            } else {
-                if (command != CMD_ADD) {
-                    NSArray *reminders = fetchReminders();
-                    calendars = sortReminders(reminders);
-                }
-
-                exitStatus = validateArguments();
-                if (exitStatus == 0)
-                    exitStatus = handleCommand();
-            }
+        if (exitStatus)
+            return exitStatus==EXIT_CLEAN ? 0 : exitStatus;
+        
+        // allocate the event store
+        if ((store=[EKEventStore alloc]) == nil) {
+            _print(stderr, @"%@: Unable to allocate the Reminders storage access.\n", MYNAME);
+            return EXIT_FAIL_ALLOC;
         }
+        
+        // init with access to Reminders
+        NSError *error;
+        if ((store=[store initWithAccessToRemindersReturningError:&error]) == nil) {
+            _print(stderr, @"%@: %@.\n", MYNAME,[error localizedDescription]);
+            return (int) error.code;
+        }
+
+        if (command != CMD_ADD) {
+            NSArray *reminders = fetchReminders();
+            calendars = sortReminders(reminders);
+        }
+
+        exitStatus = validateArguments();
+        if (! exitStatus)
+            exitStatus = handleCommand();
     }
     return exitStatus==EXIT_CLEAN ? 0 : exitStatus;
 }
