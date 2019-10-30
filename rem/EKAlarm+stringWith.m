@@ -42,9 +42,19 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     [NSString stringWithFormat:@"%@",@(self.type)];
 }
 
+- (BOOL)hasSnooze {
+    return [self respondsToSelector:@selector(isSnoozed)];
+}
+- (BOOL)noSnooze {
+    return ![self hasSnooze];
+}
+- (BOOL)snoozing { // need different name from isSnoozed
+    return [self hasSnooze] ? [(EKSnoozableAlarm*)self isSnoozed] : NO;
+}
+
 - (NSString *)stringWithDateFormatter:(NSDateFormatter *)formatter {
     if (self==nil) return self.description;
-    NSString *snoozed = ![self respondsToSelector:@selector(isSnoozed)] ? @"?" : [(EKSnoozableAlarm*)self isSnoozed] ? @"1" : @"0";
+    NSString *snoozed = [self noSnooze] ? @"?" : [(EKSnoozableAlarm*)self isSnoozed] ? @"1" : @"0";
     [formatter stringFromDate:self.absoluteDate];
     [self proximityStr];
     [self typeString];
@@ -58,6 +68,18 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     //      soundName
     // * EKAlarm <0x22dc0040>, isSnoozed:0, isDefault:0, sharedUID:E1A860B7-61B4-486E-9B7E-F28002DEFFB5
     // self.isSnoozed;
+}
+
+- (EKAlarm *)duplicateAlarm {
+    return [self copy];
+}
+- (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate {
+    EKAlarm *newAlarm = [self duplicateAlarm];
+    newAlarm.absoluteDate = newDate;
+    return newAlarm;
+}
+- (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs {
+    return [self duplicateAlarmChangingTimeTo:[NSDate dateWithTimeIntervalSinceNow:secs]];
 }
 
 @end

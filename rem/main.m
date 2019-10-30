@@ -14,10 +14,17 @@
 #import "EKEventStore+Synchronous.h"
 #import "errors.h"
 
+/*
+ TO DO:
+    * allow choosing an option by List and Title (not just List and #)
+    * add "undone" to change completed back to not completed
+    * add "finished" to get completed reminders
+ */
+
 #define MYNAME @"rem"
 #define SHOW_NEW_DETAILS 1
 
-#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"help", @"version" ]
+#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
     CMD_UNKNOWN = -1,
     CMD_LS = 0,
@@ -26,6 +33,7 @@ typedef enum _CommandType {
     CMD_CAT,
     CMD_DONE,
     CMD_EVERY, // list everything
+    CMD_SNOOZE, // list everything
     CMD_HELP,
     CMD_VERSION
 } CommandType;
@@ -33,6 +41,7 @@ typedef enum _CommandType {
 static CommandType command;
 static NSString *calendar;
 static NSString *reminder_id = nil;
+static NSString *snooze_seconds = nil;
 
 static EKEventStore *store;
 static NSDictionary *calendars;
@@ -86,6 +95,7 @@ static void _usage()
     _print(stdout, @"\t%@ cat <list> <item>\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item>\n\t\tMark reminder as complete\n",MYNAME);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
+    _print(stdout, @"\t%@ snooze <list> <item> <seconds>\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\t(Note: commands can be like \"ls\" or \"--ls\" or \"-l\".)\n",MYNAME);
@@ -156,6 +166,11 @@ static int parseArguments()
     // get the reminder id if exists
     if (args.count >= 3) {
         reminder_id = [args objectAtIndex:2];
+    }
+
+    // get the reminder id if exists
+    if (args.count >= 4) {
+        snooze_seconds = [args objectAtIndex:3];
     }
 
     return EXIT_NORMAL;
@@ -257,6 +272,12 @@ static int validateArguments()
         return EXIT_INVARG_IDRANGE;
     }
     reminder = [reminders objectAtIndex:r_id];
+    
+    if (command == CMD_SNOOZE && snooze_seconds == nil) {
+        _print(stderr, @"%@: need # of seconds to snooze\n", MYNAME);
+        return EXIT_INVARG_SNOOZEMISSING;
+    }
+    
     return EXIT_NORMAL;
 }
 
@@ -319,9 +340,8 @@ static void showReminder(BOOL showTitle, BOOL lastReminder, BOOL lastCalendar)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     [dateFormatter setDateStyle:NSDateFormatterShortStyle];
-    
+
     NSDateFormatter *dateFormatterShortDateLongTime = [[NSDateFormatter alloc] init];
-    [dateFormatter setDateStyle:NSDateFormatterShortStyle];
     dateFormatterShortDateLongTime = [[NSDateFormatter alloc] init];
     dateFormatterShortDateLongTime.dateStyle = NSDateFormatterShortStyle;
     dateFormatterShortDateLongTime.timeStyle = NSDateFormatterLongStyle;
@@ -335,25 +355,25 @@ static void showReminder(BOOL showTitle, BOOL lastReminder, BOOL lastCalendar)
         _print(stdout, @"Reminder: %@\n", reminder.title);
     _print(stdout, @"%@List: %@\n", indent, reminder.calendar.title);
 
-    _print(stdout, @"%@Created On: %@\n", indent, [dateFormatter stringFromDate:reminder.creationDate]);
+    _print(stdout, @"%@Created On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.creationDate]);
 
     if (reminder.lastModifiedDate != reminder.creationDate) {
-        _print(stdout, @"%@Last Modified On: %@\n", indent, [dateFormatter stringFromDate:reminder.lastModifiedDate]);
+        _print(stdout, @"%@Last Modified On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.lastModifiedDate]);
     }
 
     NSDate *startDate = [reminder.startDateComponents date];
     if (startDate) {
-        _print(stdout, @"%@Started On: %@\n", indent, [dateFormatter stringFromDate:startDate]);
+        _print(stdout, @"%@Started On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:startDate]);
     }
 
     NSDate *dueDate = [reminder.dueDateComponents date];
     if (dueDate) {
-        _print(stdout, @"%@Due On: %@\n", indent, [dateFormatter stringFromDate:dueDate]);
+        _print(stdout, @"%@Due On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:dueDate]);
     }
 
     if (SHOW_NEW_DETAILS) {
         if (reminder.completed) {
-            NSString *completedDateStr = reminder.completionDate ? [dateFormatter stringFromDate:reminder.completionDate] : @"yes";
+            NSString *completedDateStr = reminder.completionDate ? [dateFormatterShortDateLongTime stringFromDate:reminder.completionDate] : @"yes";
             _print(stdout, @"%@Completed: %@\n", indent, completedDateStr);
         }
         _print(stdout, @"%@Priority: %@\n", indent, [NSString stringWithFormat:@"%@",@(reminder.priority)]);
@@ -435,7 +455,7 @@ static int addReminder()
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
-        _print(stderr, @"%@: Error adding Reminder (%@)\n\t%@", MYNAME, reminder_id, [error localizedDescription]);
+        _print(stderr, @"%@: Error adding Reminder \"%@\": \t%@\n", MYNAME, reminder_id, [error localizedDescription]);
         return EXIT_FAIL_ADD;
     }
     return EXIT_NORMAL;
@@ -452,7 +472,7 @@ static int removeReminder()
     NSError *error;
     BOOL success = [store removeReminder:reminder commit:YES error:&error];
     if (!success) {
-        _print(stderr, @"%@: Error removing Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
+        _print(stderr, @"%@: Error removing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, reminder_id, reminder.title, calendar, [error localizedDescription]);
         return EXIT_FAIL_RM;
     }
     return EXIT_NORMAL;
@@ -470,8 +490,50 @@ static int completeReminder()
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
-        _print(stderr, @"%@: Error marking Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
+        _print(stderr, @"%@: Error marking Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, reminder_id, reminder.title, calendar, [error localizedDescription]);
         return EXIT_FAIL_COMPLETE;
+    }
+    return EXIT_NORMAL;
+}
+
+/*!
+    @function snoozeReminder
+    @abstract delay the snooze on a not-completed reminder
+    @returns an exit status (0 for no error)
+    @description change snooze on specified reminder to specific time
+ */
+static int snoozeReminder()
+{
+    if (reminder.completed) {
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, reminder_id, reminder.title, calendar);
+        return EXIT_SNOOZE_ALREADYCOMPLETED;
+    }
+    if (!reminder.hasAlarms || reminder.alarms==0 || reminder.alarms.count==0) {
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, reminder_id, reminder.title, calendar);
+        return EXIT_SNOOZE_NOALARMS;
+    }
+    NSUInteger nChanged = 0;
+    NSMutableArray<EKAlarm*> *alarms = [reminder.alarms mutableCopy];
+    NSTimeInterval secs = [snooze_seconds integerValue];
+    NSLog(@"secs = %@",@(secs));
+    for (NSUInteger i=0; i<alarms.count; i++) {
+        if ([alarms[i] snoozing]) {
+            alarms[i] = [alarms[i] duplicateAlarmChangingTimeToNowPlusSecs:secs];
+            nChanged++;
+        }
+    }
+    if (nChanged > 0) {
+        alarms = [alarms copy]; // make it immutable again
+        reminder.alarms = alarms;
+        NSError *error;
+        BOOL success = [store saveReminder:reminder commit:YES error:&error];
+        if (!success) {
+            _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, reminder_id, reminder.title, calendar, [error localizedDescription]);
+            return EXIT_FAIL_SNOOZE;
+        }
+    } else {
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, reminder_id, reminder.title, calendar);
+        return EXIT_SNOOZE_NOTSNOOZING;
     }
     return EXIT_NORMAL;
 }
@@ -501,6 +563,8 @@ static int handleCommand()
         case CMD_DONE:
             return completeReminder();
             break;
+        case CMD_SNOOZE:
+            return snoozeReminder();
         case CMD_HELP:
         case CMD_VERSION:
         case CMD_UNKNOWN:

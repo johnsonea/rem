@@ -15,7 +15,14 @@ NS_ASSUME_NONNULL_BEGIN
 NSString *structuredLocationString(EKStructuredLocation *loc);
 - (NSString *)proximityStr;
 - (NSString *)typeString;
+- (BOOL)hasSnooze;
+- (BOOL)noSnooze;
+- (BOOL)snoozing;
 - (NSString *)stringWithDateFormatter:(NSFormatter*)formatter;
+
+- (EKAlarm *)duplicateAlarm;
+- (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate;
+- (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs;
 
 @end
 
