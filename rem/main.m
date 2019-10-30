@@ -28,6 +28,20 @@ typedef enum _CommandType {
     CMD_VERSION
 } CommandType;
 
+typedef enum _ExitStatus {
+    EXIT_CLEAN = 99,
+    EXIT_NORMAL = 0,
+    EXIT_FAIL_REMINDERS,
+    EXIT_CMD_UNKNOWN,
+    EXIT_INVARG_NOSUCHCALENDAR,
+    EXIT_INVARG_NOID,
+    EXIT_INVARG_EMPTYCALENDAR,
+    EXIT_INVARG_IDRANGE,
+    EXIT_FAIL_ADD,
+    EXIT_FAIL_RM,
+    EXIT_FAIL_COMPLETE,
+} ExitStatus;
+
 static CommandType command;
 static NSString *calendar;
 static NSString *reminder_id = nil;
@@ -92,9 +106,10 @@ static void _usage()
 /*!
     @function parseArguments
     @abstract Command arguement parser
+    @returns an exit status (0 for no error)
     @description Parse command-line arguments and populate appropriate variables
  */
-static void parseArguments()
+static int parseArguments()
 {
     command = CMD_LS;
 
@@ -103,7 +118,7 @@ static void parseArguments()
 
     // args array is empty, command was excuted without arguments
     if (args.count == 0)
-        return;
+        return EXIT_NORMAL;
 
     NSString *cmd = [args objectAtIndex:0];
     
@@ -126,23 +141,23 @@ static void parseArguments()
     if (command == CMD_UNKNOWN) {
         _print(stderr, @"%@: Error unknown command %@", MYNAME, cmd);
         _usage();
-        exit(-1);
+        return EXIT_CMD_UNKNOWN;
     }
 
     // handle help and version requests
     if (command == CMD_HELP) {
         _usage();
-        exit(0);
+        return EXIT_CLEAN;
     }
     else if (command == CMD_VERSION) {
         _version();
-        exit(0);
+        return EXIT_CLEAN;
     }
 
     // if we're adding a reminder, overload reminder_id to hold the reminder text (title)
     if (command == CMD_ADD) {
         reminder_id = [[args subarrayWithRange:NSMakeRange(1, [args count]-1)] componentsJoinedByString:@" "];
-        return;
+        return EXIT_NORMAL;
     }
 
     // get the reminder list (calendar) if exists
@@ -155,7 +170,7 @@ static void parseArguments()
         reminder_id = [args objectAtIndex:2];
     }
 
-    return;
+    return EXIT_NORMAL;
 }
 
 /*!
@@ -233,28 +248,28 @@ static int validateArguments()
     NSUInteger calendar_id = [[calendars allKeys] indexOfObject:calendar];
     if (calendar_id == NSNotFound) {
         _print(stderr, @"%@: Error - Unknown Reminder List: \"%@\"\n", MYNAME, calendar);
-        return 10;
+        return EXIT_INVARG_NOSUCHCALENDAR;
     }
 
     if ((command == CMD_LS || command == CMD_EVERY) && reminder_id == nil)
-        return 0;
+        return EXIT_NORMAL;
 
     if (reminder_id == nil) {
         _print(stderr, @"%@: Error - no reminder # provided for Reminder List: %@\n", MYNAME, calendar);
-        return 11;
+        return EXIT_INVARG_NOID;
     }
     NSInteger r_id = [reminder_id integerValue] - 1;
     NSArray *reminders = [calendars objectForKey:calendar];
     if (reminders.count < 1) {
         _print(stderr, @"%@: Error - there are no reminders in Reminder List: %@\n", MYNAME, calendar);
-        return 12;
+        return EXIT_INVARG_EMPTYCALENDAR;
     }
     if (r_id < 0 || r_id > reminders.count-1) {
         _print(stderr, @"%@: Error - ID Out of Range [1,%@] for Reminder List: %@\n", MYNAME, @(reminders.count), calendar);
-        return 13;
+        return EXIT_INVARG_IDRANGE;
     }
     reminder = [reminders objectAtIndex:r_id];
-    return 0;
+    return EXIT_NORMAL;
 }
 
 /*!
@@ -433,9 +448,9 @@ static int addReminder()
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
         _print(stderr, @"%@: Error adding Reminder (%@)\n\t%@", MYNAME, reminder_id, [error localizedDescription]);
-        return 20;
+        return EXIT_FAIL_ADD;
     }
-    return 0;
+    return EXIT_NORMAL;
 }
 
 /*!
@@ -450,9 +465,9 @@ static int removeReminder()
     BOOL success = [store removeReminder:reminder commit:YES error:&error];
     if (!success) {
         _print(stderr, @"%@: Error removing Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
-        return 21;
+        return EXIT_FAIL_RM;
     }
-    return 0;
+    return EXIT_NORMAL;
 }
 
 /*!
@@ -468,9 +483,9 @@ static int completeReminder()
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     if (!success) {
         _print(stderr, @"%@: Error marking Reminder (%@) from list %@\n\t%@", MYNAME, reminder_id, calendar, [error localizedDescription]);
-        return 22;
+        return EXIT_FAIL_COMPLETE;
     }
-    return 0;
+    return EXIT_NORMAL;
 }
 
 /*!
@@ -510,24 +525,25 @@ int main(int argc, const char * argv[]) {
     int exitStatus = 0;
 
     @autoreleasepool {
-        parseArguments();
-
-        store = [[EKEventStore alloc] initWithAccessToEntityTypes:EKEntityMaskReminder];
-        if (store == nil) {
-            _print(stderr, @"%@: Unable to access the Reminders storage\n", MYNAME);
-            exitStatus = 1;
-        } else {
+        exitStatus = parseArguments();
+        if (exitStatus == 0) {
             
-            if (command != CMD_ADD) {
-                NSArray *reminders = fetchReminders();
-                calendars = sortReminders(reminders);
-            }
+            store = [[EKEventStore alloc] initWithAccessToEntityTypes:EKEntityMaskReminder];
+            if (store == nil) {
+                _print(stderr, @"%@: Unable to access the Reminders storage\n", MYNAME);
+                exitStatus = EXIT_FAIL_REMINDERS;
+            } else {
+                if (command != CMD_ADD) {
+                    NSArray *reminders = fetchReminders();
+                    calendars = sortReminders(reminders);
+                }
 
-            exitStatus = validateArguments();
-            if (exitStatus == 0)
-                exitStatus = handleCommand();
+                exitStatus = validateArguments();
+                if (exitStatus == 0)
+                    exitStatus = handleCommand();
+            }
         }
     }
-    return exitStatus;
+    return exitStatus==EXIT_CLEAN ? 0 : exitStatus;
 }
 
