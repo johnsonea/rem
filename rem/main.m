@@ -19,8 +19,10 @@
  TO DO:
     * add "undone" to change completed back to not completed
     * add "finished" to get completed reminders
-    * allow <list> to be "*" or "all" to denote all calendars
-        - would allow specifying reminder title but don't care which calendar
+    * add: allow additional argument for due date&time
+    * allow multiple <item> designations
+    * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
+    * rm: save reminder info so we can unrm
  */
 
 #define MYNAME @"rem"
@@ -49,6 +51,7 @@ static NSString *snoozeSecondsString = nil;
 static EKEventStore *store;
 static NSDictionary *calendars;
 static EKReminder *reminder;
+static NSArray<EKReminder*> *allReminders;
 
 #define TACKER @"├──"
 #define CORNER @"└──"
@@ -94,11 +97,11 @@ static void _usage()
     _print(stdout, @"Usage:\n");
     _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ rm <list> <item>\n\t\tRemove reminder from list\n",MYNAME);
-    _print(stdout, @"\t%@ add <reminder>\n\t\tAdd reminder to your default list\n",MYNAME);
+    _print(stdout, @"\t%@ add <remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME);
     _print(stdout, @"\t%@ cat <list> <item>\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item>\n\t\tMark reminder as complete\n",MYNAME);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ snooze <list> <item> <seconds>\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
+    _print(stdout, @"\t%@ snooze <list> <seconds> <item>\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n",MYNAME);
@@ -176,6 +179,13 @@ static int parseArguments()
     if (args.count >= 4) {
         snoozeSecondsString = [args objectAtIndex:3];
     }
+    
+    if (command == CMD_SNOOZE) {
+        // swap <item> and <seconds>
+        NSString *tmp = reminder_id_str;
+        reminder_id_str = snoozeSecondsString;
+        snoozeSecondsString = tmp;
+    }
 
     return EXIT_NORMAL;
 }
@@ -251,19 +261,23 @@ static NSDictionary* sortReminders(NSArray *reminders)
  */
 static int validateArguments()
 {
-    if ((command == CMD_LS || command == CMD_EVERY) && calendarTitle == nil)
+    BOOL allCalendars = [calendarTitle isEqualToString:@""] || [calendarTitle isEqualToString:@"*"];
+    
+    if ((command == CMD_LS || command == CMD_EVERY) && (calendarTitle == nil || allCalendars)) {
+        calendarTitle = nil;
         return 0;
+    }
 
     if (command == CMD_ADD)
         return 0;
 
     NSUInteger calendar_id = [[calendars allKeys] indexOfObject:calendarTitle];
-    if (calendar_id == NSNotFound) {
+    if (!allCalendars && calendar_id == NSNotFound) {
         _print(stderr, @"%@: Error - Unknown Reminder List: \"%@\"\n", MYNAME, calendarTitle);
         return EXIT_INVARG_NOSUCHCALENDAR;
     }
 
-    if ((command == CMD_LS || command == CMD_EVERY) && reminder_id_str == nil)
+    if ((command == CMD_LS || command == CMD_EVERY) && reminder_id_str == nil) // list all reminders in calendar
         return EXIT_NORMAL;
 
     if (reminder_id_str == nil) {
@@ -271,12 +285,12 @@ static int validateArguments()
         return EXIT_INVARG_NOID;
     }
     
-    NSArray *reminders = [calendars objectForKey:calendarTitle];
-    if (reminders.count < 1) {
-        _print(stderr, @"%@: Error - there are no reminders in Reminder List: %@\n", MYNAME, calendarTitle);
-        return EXIT_INVARG_EMPTYCALENDAR;
-    }
     if ([reminder_id_str hasPrefix:REMINDER_TITLE_PREFIX]) {
+        NSArray *reminders = allCalendars ? allReminders: [calendars objectForKey:calendarTitle];
+        if (reminders.count < 1) {
+            _print(stderr, @"%@: Error - there are no reminders\n", MYNAME, allCalendars ? @"" : [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle]);
+            return EXIT_INVARG_EMPTYCALENDAR;
+        }
         // try to find the reminder by title
         __block NSString *title = [reminder_id_str substringFromIndex:[REMINDER_TITLE_PREFIX length]];
         NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title == %@",title];
@@ -285,14 +299,19 @@ static int validateArguments()
         }];
         NSArray *filteredReminders = [reminders filteredArrayUsingPredicate:predicate];
         if (filteredReminders == nil || filteredReminders.count == 0) {
-            _print(stderr, @"%@: Error - there are no %@reminders titled \"%@\" in List %@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", title, calendarTitle);
+            _print(stderr, @"%@: Error - there are no %@reminders titled \"%@\"%@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", title, allCalendars ? @"" : [NSString stringWithFormat:@" in List %@",calendarTitle]);
             return EXIT_INVARG_BADTITLE;
         } else if (filteredReminders.count > 1) {
-            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\" in List %@ -- do not know which one to snooze\n", MYNAME, @(filteredReminders.count), title, calendarTitle);
+            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\"%@ -- do not know which one to snooze\n", MYNAME, @(filteredReminders.count), title, allCalendars ? @"" : [NSString stringWithFormat:@" in List %@",calendarTitle]);
             return EXIT_INVARG_BADTITLE;
         }
         reminder = filteredReminders[0];
     } else {
+        NSArray *reminders = [calendars objectForKey:calendarTitle];
+        if (reminders.count < 1) {
+            _print(stderr, @"%@: Error - there are no reminders in Reminder List: %@\n", MYNAME, calendarTitle);
+            return EXIT_INVARG_EMPTYCALENDAR;
+        }
         NSInteger r_id = [reminder_id_str integerValue] - 1;
         if (r_id < 0 || r_id > reminders.count-1) {
             _print(stderr, @"%@: Error - ID Out of Range [1,%@] for Reminder List: %@\n", MYNAME, @(reminders.count), calendarTitle);
@@ -633,8 +652,8 @@ int main(int argc, const char * argv[]) {
         }
 
         if (command != CMD_ADD) {
-            NSArray *reminders = fetchReminders();
-            calendars = sortReminders(reminders);
+            allReminders = fetchReminders();
+            calendars = sortReminders(allReminders);
         }
 
         exitStatus = validateArguments();
