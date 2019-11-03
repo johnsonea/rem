@@ -65,7 +65,7 @@ NSDictionary *errorUserInfoForStatusAppendingStringToDescriptionAndReason(ExitSt
     EKEventStore *store = nil;
     *errorRef = nil;
     
-    if (0 && [self respondsToSelector:@selector(initWithAccessToEntityTypes:)]) { // deprecated in MacOS 10.9 so make sure it still works
+    if ([self respondsToSelector:@selector(initWithAccessToEntityTypes:)]) { // deprecated in MacOS 10.9 so make sure it still works
         store = [self initWithAccessToEntityTypes:EKEntityMaskReminder];
     } else if (! [[EKEventStore class] respondsToSelector:@selector(authorizationStatusForEntityType:)]) {
         // assume we don't need authorization if neither initWithAccess nor authorizationStatus work

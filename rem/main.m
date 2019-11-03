@@ -14,6 +14,7 @@
 #import "EKEventStore+Synchronous.h"
 #import "errors.h"
 #import "EKReminder+Snoozing.h"
+#import "NSMutableArray+Queue.h"
 
 /*
  TO DO:
@@ -25,9 +26,20 @@
     * rm: save reminder info so we can unrm
  */
 
+#define NSLog(format, ...) NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__)
+
+// #define debug3(format, ...) fprintf (stderr, format, ## __VA_ARGS__)
+
+
 #define MYNAME @"rem"
 #define SHOW_NEW_DETAILS 1
-#define REMINDER_TITLE_PREFIX @"-"
+#define RM_ASK_BEFORE 1
+
+NSString *REMINDER_TITLE_PREFIX = @"--";
+NSString *PLUS_PREFIX = @"+";
+NSString *MINUS_PREFIX = @"-";
+NSString *SWITCH_SHORTDASH = @"-";
+NSString *SWITCH_LONGDASH  = @"--";
 
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
@@ -38,15 +50,17 @@ typedef enum _CommandType {
     CMD_CAT,
     CMD_DONE,
     CMD_EVERY, // list everything
-    CMD_SNOOZE, // list everything
+    CMD_SNOOZE, // snooze a reminder
     CMD_HELP,
     CMD_VERSION
 } CommandType;
 
 static CommandType command;
+BOOL isUppercaseCommand = NO;
 static NSString *calendarTitle;
 static NSString *reminder_id_str = nil;
 static NSString *snoozeSecondsString = nil;
+static BOOL useAdvanced = NO;
 
 static EKEventStore *store;
 static NSDictionary *calendars;
@@ -94,14 +108,16 @@ static void _version()
  */
 static void _usage()
 {
+    NSString *SPACES = [@"" stringByPaddingToLength:[MYNAME length]
+         withString:@" " startingAtIndex:0];
     _print(stdout, @"Usage:\n");
     _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ rm <list> <item>\n\t\tRemove reminder from list\n",MYNAME);
-    _print(stdout, @"\t%@ add <remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME);
-    _print(stdout, @"\t%@ cat <list> <item>\n\t\tShow reminder detail\n",MYNAME);
-    _print(stdout, @"\t%@ done <list> <item>\n\t\tMark reminder as complete\n",MYNAME);
+    _print(stdout, @"\t%@ rm <list> <item> [<item2> ...]\n\t\tRemove reminder(s) from list\n",MYNAME);
+    _print(stdout, @"\t%@ add [--due <date> | --due <timeFromNow>] [--note <note>] ...\n\t%@     [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,useAdvanced?[NSString stringWithFormat:@"... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]]... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]]... \n\t%@     [--DATE  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES]:@"");
+    _print(stdout, @"\t%@ cat <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n",MYNAME);
+    _print(stdout, @"\t%@ done <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n",MYNAME);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ snooze <list> <seconds> <item>\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
+    _print(stdout, @"\t%@ snooze <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n",MYNAME);
@@ -114,37 +130,41 @@ static void _usage()
     @returns an exit status (0 for no error)
     @description Parse command-line arguments and populate appropriate variables
  */
-static int parseArguments()
+static int parseArguments(NSMutableArray **itemArgs)
 {
-    command = CMD_LS;
-
-    NSMutableArray *args = [NSMutableArray arrayWithArray:[[NSProcessInfo processInfo] arguments]];
-    [args removeObjectAtIndex:0];    // pop off application argument
+    NSMutableArray *args = *itemArgs = [NSMutableArray arrayWithArray:[[NSProcessInfo processInfo] arguments]];
+    [args shift]; // pop off application argument
 
     // args array is empty, command was excuted without arguments
-    if (args.count == 0)
+    if (args.count == 0) {
+        command = CMD_LS;
         return EXIT_NORMAL;
-
-    NSString *cmd = [args objectAtIndex:0];
-    
-    // allow --ls in addition to ls, etc.
-    if ([cmd hasPrefix:@"--"]) {
-        cmd = [cmd substringFromIndex:[@"--" length]];
     }
-    command = (CommandType)[COMMANDS indexOfObject:cmd];
+
+    NSString *cmd = [args shift];
+    isUppercaseCommand = [[cmd uppercaseString] isEqualToString:cmd]; // if so, then no need to warn about "DONE" and "RM"
+    cmd = [cmd lowercaseString];
+    // allow --ls in addition to ls, etc.
+    BOOL longSwitch = [cmd hasPrefix:SWITCH_LONGDASH];
+    if (longSwitch) {
+        cmd = [cmd substringFromIndex:[SWITCH_LONGDASH length]];
+    }
+    NSUInteger _command = [COMMANDS indexOfObject:cmd];
+    command = _command==NSNotFound ? CMD_UNKNOWN : (CommandType)_command; // old approach assumed NSNotFound is -1 (which it was in 32-bit apps) and just typecast _command as a CommandType; in 64-bit, NSNotFound is no longer -1 so this is needed
     
     // allow -l in addition to ls and --ls
-    if (command == CMD_UNKNOWN && [cmd hasPrefix:@"-"] && [(cmd = [cmd substringFromIndex:[@"-" length]]) length]>0) {
-        for (NSString *aCommand in COMMANDS) {
-            if ([aCommand hasPrefix:cmd]) {
-                command = (CommandType)[COMMANDS indexOfObject:aCommand];
+    if (!longSwitch && command == CMD_UNKNOWN && [cmd hasPrefix:SWITCH_SHORTDASH] && [(cmd = [cmd substringFromIndex:[SWITCH_SHORTDASH length]]) length]>0) {
+        for (NSUInteger i=0; i<COMMANDS.count; i++) {
+            if ([COMMANDS[i] hasPrefix:cmd]) {
+                command = (CommandType)i;
                 break;
             }
         }
     }
     
+
     if (command == CMD_UNKNOWN) {
-        _print(stderr, @"%@: Error unknown command %@", MYNAME, cmd);
+        _print(stderr, @"%@: Error unknown command %@\n", MYNAME, cmd);
         _usage();
         return EXIT_CMD_UNKNOWN;
     }
@@ -159,34 +179,25 @@ static int parseArguments()
         return EXIT_CLEAN;
     }
 
-    // if we're adding a reminder, overload reminder_id_str to hold the reminder text (title)
+    // if we're adding a reminder, leave all remaining arguments here
     if (command == CMD_ADD) {
-        reminder_id_str = [[args subarrayWithRange:NSMakeRange(1, [args count]-1)] componentsJoinedByString:@" "];
         return EXIT_NORMAL;
     }
 
     // get the reminder list (calendar) if exists
-    if (args.count >= 2) {
-        calendarTitle = [args objectAtIndex:1];
+    if (args.count) {
+        calendarTitle = [args shift];
+        if ([calendarTitle isEqualToString:@""] || [calendarTitle isEqualToString:@"*"]) {
+            calendarTitle = nil; // denotes "all calendars"
+        }
     }
 
-    // get the reminder id if exists
-    if (args.count >= 3) {
-        reminder_id_str = [args objectAtIndex:2];
-    }
-
-    // get the reminder id if exists
-    if (args.count >= 4) {
-        snoozeSecondsString = [args objectAtIndex:3];
+    if (command == CMD_SNOOZE) {
+        snoozeSecondsString = [args shift];
     }
     
-    if (command == CMD_SNOOZE) {
-        // swap <item> and <seconds>
-        NSString *tmp = reminder_id_str;
-        reminder_id_str = snoozeSecondsString;
-        snoozeSecondsString = tmp;
-    }
-
+    // remaining args, if any, are reminder ID's or -titles
+    
     return EXIT_NORMAL;
 }
 
@@ -261,34 +272,55 @@ static NSDictionary* sortReminders(NSArray *reminders)
  */
 static int validateArguments()
 {
-    BOOL allCalendars = [calendarTitle isEqualToString:@""] || [calendarTitle isEqualToString:@"*"];
-    
-    if ((command == CMD_LS || command == CMD_EVERY) && (calendarTitle == nil || allCalendars)) {
-        calendarTitle = nil;
-        return 0;
-    }
-
-    if (command == CMD_ADD)
-        return 0;
-
-    NSUInteger calendar_id = [[calendars allKeys] indexOfObject:calendarTitle];
-    if (!allCalendars && calendar_id == NSNotFound) {
-        _print(stderr, @"%@: Error - Unknown Reminder List: \"%@\"\n", MYNAME, calendarTitle);
-        return EXIT_INVARG_NOSUCHCALENDAR;
-    }
-
-    if ((command == CMD_LS || command == CMD_EVERY) && reminder_id_str == nil) // list all reminders in calendar
+    if ((command == CMD_LS || command == CMD_EVERY) && calendarTitle==nil) {
         return EXIT_NORMAL;
+    }
 
-    if (reminder_id_str == nil) {
-        _print(stderr, @"%@: Error - no reminder # provided for Reminder List: %@\n", MYNAME, calendarTitle);
-        return EXIT_INVARG_NOID;
+    if (command == CMD_ADD) {
+        return EXIT_NORMAL;
+    }
+
+    if (calendarTitle) {
+        NSUInteger calendar_id = [[calendars allKeys] indexOfObject:calendarTitle];
+        if (calendar_id == NSNotFound) {
+            _print(stderr, @"%@: Error - Unknown Reminder List: \"%@\"\n", MYNAME, calendarTitle);
+            return EXIT_INVARG_NOSUCHCALENDAR;
+        }
+    }
+
+    if (command == CMD_LS || command == CMD_EVERY) // list all reminders in calendar
+        return EXIT_NORMAL;
+    
+    if (command == CMD_SNOOZE && snoozeSecondsString == nil) {
+        _print(stderr, @"%@: need # of seconds to snooze\n", MYNAME);
+        return EXIT_INVARG_SNOOZEMISSING;
     }
     
-    if ([reminder_id_str hasPrefix:REMINDER_TITLE_PREFIX]) {
-        NSArray *reminders = allCalendars ? allReminders: [calendars objectForKey:calendarTitle];
+    return EXIT_NORMAL;
+}
+
+// BOOL showError = YES;
+/*
+if (showError) {
+    _print(stderr, @"%@: Error - no reminder # provided for Reminder List: %@\n", MYNAME, calendarTitle);
+    return EXIT_INVARG_NOID;
+}
+*/
+
+int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderRef, NSUInteger *reminder_id_ref) {
+    *reminderRef = nil; // probably not necessary but just in case
+    *reminder_id_ref = 0; // probably not necessary but just in case
+    if (args==nil || args.count==0) {
+        return EXIT_NORMAL; // no error, only ran out of arguments
+    }
+    NSString *reminder_id_str = [args pop];
+    if ([[reminder_id_str lowercaseString] isEqualToString:@"notified"]) {
+        _print(stderr, @"%@: have not written \"notified reminders\" code yet.\n", MYNAME );
+        return EXIT_FATAL;
+    } else if ([reminder_id_str hasPrefix:REMINDER_TITLE_PREFIX]) {
+        NSArray *reminders = calendarTitle ? [calendars objectForKey:calendarTitle] : allReminders;
         if (reminders.count < 1) {
-            _print(stderr, @"%@: Error - there are no reminders\n", MYNAME, allCalendars ? @"" : [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle]);
+            _print(stderr, @"%@: Error - there are no reminders\n", MYNAME, calendarTitle ? [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle] : @"");
             return EXIT_INVARG_EMPTYCALENDAR;
         }
         // try to find the reminder by title
@@ -299,34 +331,34 @@ static int validateArguments()
         }];
         NSArray *filteredReminders = [reminders filteredArrayUsingPredicate:predicate];
         if (filteredReminders == nil || filteredReminders.count == 0) {
-            _print(stderr, @"%@: Error - there are no %@reminders titled \"%@\"%@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", title, allCalendars ? @"" : [NSString stringWithFormat:@" in List %@",calendarTitle]);
+            _print(stderr, @"%@: Error - there are no %@reminders titled \"%@\"%@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
             return EXIT_INVARG_BADTITLE;
         } else if (filteredReminders.count > 1) {
-            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\"%@ -- do not know which one to snooze\n", MYNAME, @(filteredReminders.count), title, allCalendars ? @"" : [NSString stringWithFormat:@" in List %@",calendarTitle]);
+            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\"%@ -- do not know which one to snooze\n", MYNAME, @(filteredReminders.count), title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
             return EXIT_INVARG_BADTITLE;
         }
-        reminder = filteredReminders[0];
+        *reminderRef = filteredReminders[0];
+    } else if (calendarTitle == nil) {
+        _print(stderr, @"%@: Error - can only specify a reminder by number when also specifying the reminder List\n", MYNAME);
+        return EXIT_INVARG_NOTALLCALENDARS;
     } else {
         NSArray *reminders = [calendars objectForKey:calendarTitle];
         if (reminders.count < 1) {
             _print(stderr, @"%@: Error - there are no reminders in Reminder List: %@\n", MYNAME, calendarTitle);
             return EXIT_INVARG_EMPTYCALENDAR;
         }
-        NSInteger r_id = [reminder_id_str integerValue] - 1;
-        if (r_id < 0 || r_id > reminders.count-1) {
+        NSInteger r_id = [reminder_id_str integerValue];
+        if (r_id < 0) r_id = reminders.count + r_id + 1;
+        *reminder_id_ref = r_id;
+        if (r_id < 1 || r_id > reminders.count) {
             _print(stderr, @"%@: Error - ID Out of Range [1,%@] for Reminder List: %@\n", MYNAME, @(reminders.count), calendarTitle);
             return EXIT_INVARG_IDRANGE;
         }
-        reminder = [reminders objectAtIndex:r_id];
+        *reminderRef = [reminders objectAtIndex:r_id-1];
     }
-    
-    if (command == CMD_SNOOZE && snoozeSecondsString == nil) {
-        _print(stderr, @"%@: need # of seconds to snooze\n", MYNAME);
-        return EXIT_INVARG_SNOOZEMISSING;
-    }
-    
     return EXIT_NORMAL;
 }
+
 
 /*!
     @function _printCalendarLine
@@ -402,20 +434,20 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         _print(stdout, @"Reminder: %@\n", reminder.title);
     _print(stdout, @"%@List: %@\n", indent, reminder.calendar.title);
 
-    _print(stdout, @"%@Created On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.creationDate]);
+    _print(stdout, @"%@Created  On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.creationDate]);
 
     if (reminder.lastModifiedDate != reminder.creationDate) {
-        _print(stdout, @"%@Last Modified On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.lastModifiedDate]);
+        _print(stdout, @"%@Modified On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.lastModifiedDate]);
     }
 
-    NSDate *startDate = [reminder.startDateComponents date];
+    NSDate *startDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.startDateComponents]; // this does not work: [reminder.startDateComponents date];
     if (startDate) {
-        _print(stdout, @"%@Started On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:startDate]);
+        _print(stdout, @"%@Started  On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:startDate]);
     }
 
-    NSDate *dueDate = [reminder.dueDateComponents date];
+    NSDate *dueDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]; // this does not work: [reminder.dueDateComponents date];
     if (dueDate) {
-        _print(stdout, @"%@Due On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:dueDate]);
+        _print(stdout, @"%@Due      On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:dueDate]);
     }
 
     if (SHOW_NEW_DETAILS) {
@@ -489,6 +521,151 @@ static void listReminders(NSString *calendarTitle, BOOL withDetails)
     }
 }
 
+int scanIntegerAlone(NSString *str, NSInteger *ref) {
+    NSScanner *scanner = [NSScanner localizedScannerWithString:str];
+    return (![scanner scanInteger:ref] ? 0 : scanner.atEnd ? 1 : 2);
+}
+int scanDoubleAlone(NSString *str, double *ref) {
+    NSScanner *scanner = [NSScanner localizedScannerWithString:str];
+    return (![scanner scanDouble:ref] ? 0 : scanner.atEnd ? 1 : 2);
+}
+int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
+    NSRange r;
+    NSError *error = NULL;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*((\\d+(\\.\\d*)?)\\s*d)?\\s*((\\d+(\\.\\d*)?)\\s*h)?\\s*((\\d+(\\.\\d*)?)\\s*m)?\\s*((\\d+(\\.\\d*)?)\\s*s?)?\\s*$" options:NSRegularExpressionCaseInsensitive error:&error];
+    NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
+    if (error != nil) {
+        _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), error.localizedDescription);
+        return EXIT_FATAL;
+    }
+    NSLog(@"parseTimeSeparatedByDHMS 2");
+    NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
+    if (match == nil)
+        return EXIT_CLEAN;
+    NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
+    NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
+    NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
+    r = [match rangeAtIndex:2];
+    NSLog(@"parseTimeSeparatedByDHMS 6, match.range[2] = [%@,%@]",@(r.location),@(r.length));
+    r = [match rangeAtIndex:5];
+    NSLog(@"parseTimeSeparatedByDHMS 7, match.range[5] = [%@,%@]",@(r.location),@(r.length));
+    r = [match rangeAtIndex:8];
+    NSLog(@"parseTimeSeparatedByDHMS 8, match.range[8] = [%@,%@]",@(r.location),@(r.length));
+    r = [match rangeAtIndex:11];
+    NSLog(@"parseTimeSeparatedByDHMS 9, match.range[11] = [%@,%@]",@(r.location),@(r.length));
+    NSLog(@"parseTimeSeparatedByDHMS 10");
+    // NSRange matchRange = [match range];
+    *secsRef = 0.0;
+    r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*86400.0;
+    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
+    r=[match rangeAtIndex:6]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
+    r=[match rangeAtIndex:8]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
+    return EXIT_NORMAL;
+}
+int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
+    NSRange r;
+    NSError *error = NULL;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*((((\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(\\.\\d*)?)$" options:NSRegularExpressionCaseInsensitive error:&error];
+    NSLog(@"parseTimeSeparatedByColons 1, regex = %@",regex);
+    if (error != nil) {
+        _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), error.localizedDescription);
+        return EXIT_FATAL;
+    }
+    NSLog(@"parseTimeSeparatedByColons 2");
+    // location==NSNotFound ==> range is blank
+    NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
+    if (match == nil)
+        return EXIT_CLEAN;
+    NSLog(@"parseTimeSeparatedByColons 3, match = %@",match);
+    NSLog(@"parseTimeSeparatedByColons 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
+    NSLog(@"parseTimeSeparatedByColons 5, match.numberOfRanges = %@",@(match.numberOfRanges));
+    r = [match rangeAtIndex:4];
+    NSLog(@"parseTimeSeparatedByColons 6, match.range[4] = [%@,%@]",@(r.location),@(r.length));
+    r = [match rangeAtIndex:5];
+    NSLog(@"parseTimeSeparatedByColons 7, match.range[5] = [%@,%@]",@(r.location),@(r.length));
+    r = [match rangeAtIndex:6];
+    NSLog(@"parseTimeSeparatedByColons 8, match.range[6] = [%@,%@]",@(r.location),@(r.length));
+    r = [match rangeAtIndex:7];
+    NSLog(@"parseTimeSeparatedByColons 9, match.range[7] = [%@,%@]",@(r.location),@(r.length));
+    NSLog(@"parseTimeSeparatedByColons 10");
+    // NSRange matchRange = [match range];
+    *secsRef = 0.0;
+    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*86400.0;
+    r=[match rangeAtIndex:5]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*3600.0;
+    r=[match rangeAtIndex:6]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*60.0;
+    r=[match rangeAtIndex:7]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    NSLog(@"parseTimeSeparatedByColons 99, secs = %@",@(*secsRef));
+    return EXIT_NORMAL;
+}
+
+
+int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate **absoluteDateRef, NSTimeInterval *relativeOffsetRef) {
+    BOOL hasNegative;
+    if (absoluteDateRef == nil) {
+        _print(stderr, @"%@: stringToAbsoluteDateOrRelativeOffset's absoluteDateRef is nil (which should not happen).\n", MYNAME);
+        return EXIT_INVARG_ABSORREL;
+    } else if (relativeOffsetRef == nil) {
+        _print(stderr, @"%@: stringToAbsoluteDateOrRelativeOffset's relativeOffsetRef is nil (which should not happen).\n", MYNAME);
+        return EXIT_INVARG_ABSORREL;
+    } else if ((hasNegative=[str hasPrefix:MINUS_PREFIX]) || [str hasPrefix:PLUS_PREFIX]) {
+        NSString *substr = [str substringFromIndex:hasNegative?[MINUS_PREFIX length]:[PLUS_PREFIX length]];
+        double secs = 0;
+        int res;
+        // res = scanDoubleAlone(substr, &secs); // no longer need this as the RegExps below should work
+        // NSLog(@"res = %@",@(res));
+        // if (res != 1) { // don't care if there were 0 or >=2
+            // try something other than seconds
+            res = parseTimeSeparatedByDHMS(substr,&secs);
+            if (res == EXIT_CLEAN)
+                res = parseTimeSeparatedByColons(substr,&secs);
+            if (res == EXIT_CLEAN) { // couldn't match either pattern
+                _print(stderr, @"%@: %@bad relative offset seconds \"%@\".\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
+                return EXIT_INVARG_BADPRIORITY;
+            } else if (res != EXIT_NORMAL)
+                return res;
+        // }
+        if (hasNegative)
+            secs = - secs;
+        NSLog(@"stringToAbsoluteDateOrRelativeOffset: secs = %@",@(secs));
+        *relativeOffsetRef = (NSTimeInterval)secs;
+        *absoluteDateRef = nil; // shouldn't be necessary but just in case
+    } else {
+        NSError *error = nil;
+        NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeDate error:&error];
+        if (detector == nil) {
+            _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), error.localizedDescription);
+            return EXIT_INVARG_BADDATADETECTOR;
+        }
+        NSUInteger nMatches = [detector numberOfMatchesInString:str options:0 range:NSMakeRange(0, [str length])];
+        NSTextCheckingResult *firstMatch =  [detector firstMatchInString:str options:0 range:NSMakeRange(0, [str length])];
+        // NSLog(@"firstmatch: %@",firstMatch);
+        // NSLog(@"range of match: [%@,%@)",@(firstMatch.range.location),@(firstMatch.range.length));
+
+        if (nMatches == 0 || [firstMatch resultType]!=NSTextCheckingTypeDate) {
+            _print(stderr, @"%@: unable to parse a %@date from \"%@\"\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str);
+            return EXIT_INVARG_BADDATE;
+        }
+
+        NSString *leftovers = [str stringByReplacingCharactersInRange:firstMatch.range withString:@" "];
+        if ([[leftovers stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] length] > 0) {
+            _print(stderr, @"%@: %@found more than just a date in \"%@\"\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
+            return EXIT_INVARG_BADDATE;
+        }
+        
+        *absoluteDateRef = [firstMatch date];
+        *relativeOffsetRef = 0;
+
+        // components->date: NSDate *dueDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents];
+
+        // currentCalendar = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
+        // currentCalendar = [NSCalendar currentCalendar];
+        // [[NSCalendar currentCalendar] components:(NSCalendarUnit)NSUIntegerMax fromDate:dueDate];
+
+    }
+    return EXIT_NORMAL;
+}
+
 /*!
     @function addReminder
     @abstract add a reminder
@@ -497,20 +674,171 @@ static void listReminders(NSString *calendarTitle, BOOL withDetails)
         title of new reminder
     @description add a reminder to the default calendar
  */
-static int addReminder(NSString *reminder_title)
+static int addReminder(NSMutableArray<NSString*> *itemArgs)
 {
+    // parse command line arguments for dueDate, note, priority
+    NSString *noteString;
+    NSDate *alarmDate, *dueDate, *startDate;
+    BOOL useAlarmOffset = NO;
+    NSTimeInterval alarmOffset;
+    NSUInteger priority = 0;
+    BOOL normal_due = NO;
+    // NSLog(@"addReminder: itemArgs=%@",[itemArgs componentsJoinedByString:@","]);
+    while ([[itemArgs firstObject] hasPrefix:SWITCH_LONGDASH]) {
+        NSString *swtch = [[itemArgs shift] substringFromIndex:[SWITCH_LONGDASH length]];
+        if ([swtch isEqualToString:@"date"]//||[swtch isEqualToString:@"due"]
+            || ([swtch isEqualToString:@"DUE"]&&useAdvanced)
+            || ([swtch isEqualToString:@"ALARM"]&&useAdvanced)
+            || ([swtch isEqualToString:@"START"]&&useAdvanced)
+            ) {
+            NSString *str = [itemArgs shift];
+            // if ([swtch isEqualToString:@"due"]) swtch = @"date"; // "due" is a synonym for "date" in the non-advanced switches
+            NSString *label = [swtch isEqualToString:@"date"] ? @"reminder" : swtch;
+            NSDate *absoluteDate;  NSTimeInterval relativeOffset;
+            int res = stringToAbsoluteDateOrRelativeOffset(str,label,&absoluteDate,&relativeOffset);
+            if (res != EXIT_NORMAL)
+                return EXIT_NORMAL;
+            if ([swtch isEqualToString:@"date"]) {
+                alarmDate = absoluteDate ? absoluteDate : [NSDate dateWithTimeIntervalSinceNow:relativeOffset];
+                normal_due = YES;
+            } else if ([swtch isEqualToString:@"DUE"]) {
+                dueDate = absoluteDate ? absoluteDate : [NSDate dateWithTimeIntervalSinceNow:relativeOffset];
+            } else if ([swtch isEqualToString:@"ALARM"]) {
+                if (absoluteDate)
+                    alarmDate = absoluteDate;
+                else {
+                    useAlarmOffset = YES;
+                    alarmOffset = relativeOffset;
+                }
+            } else if ([swtch isEqualToString:@"START"]) {
+                startDate = absoluteDate ? absoluteDate : [NSDate dateWithTimeIntervalSinceNow:relativeOffset];
+            } else { // should not happen
+                _print(stderr, @"%@: fatal error: unknown addReminder switch \"-%@\".\n", MYNAME,swtch);
+                return EXIT_FATAL;
+            }
+        } else if ([swtch isEqualToString:@"note"]) {
+            noteString = [itemArgs shift];
+            // NSLog(@"set note to: %@", noteString);
+        } else if ([swtch isEqualToString:@"priority"]) {
+            NSString *priorityString = [itemArgs shift];
+            if (0) {
+                priority = [priorityString integerValue];
+            } else {
+                NSInteger priorityInteger;
+                int res = scanIntegerAlone(priorityString, &priorityInteger);
+                if (res==0 || priorityInteger<0) {
+                    _print(stderr, @"%@: bad priority \"%@\" (should be an integer 0-9).\n", MYNAME, priorityString);
+                    return EXIT_INVARG_BADPRIORITY;
+                } else if (res > 1) {
+                    _print(stderr, @"%@: bad priority \"%@\" (should only be an integer 0-9).\n", MYNAME, priorityString);
+                    return EXIT_INVARG_BADPRIORITY;
+                }
+                priority = (NSUInteger) priorityInteger;
+            }
+            // NSLog(@"set priority to: %@", @(priority));
+        } else {
+            _print(stderr, @"%@: unknown \"add\" switch \"--%@\".\n", MYNAME, swtch);
+            return EXIT_INVARG_BADSWITCH;
+        }
+    }
+    
+    // assume rest of arguments are the title of the new reminder
+    NSString *reminderTitle = [[itemArgs subarrayWithRange:NSMakeRange(0, [itemArgs count])] componentsJoinedByString:@" "];
+    [itemArgs removeAllObjects];
+    
+    // create the reminder
     reminder = [EKReminder reminderWithEventStore:store];
     reminder.calendar = [store defaultCalendarForNewReminders];
-    reminder.title = reminder_title;
-
+    reminder.title = reminderTitle;
+    reminder.priority = priority;
+    if (noteString) reminder.notes=noteString;
+    if (alarmDate) {
+        if (normal_due) {
+            if (dueDate   == nil)   dueDate = alarmDate;
+            if (startDate == nil) startDate = alarmDate;
+        }
+        // NSLog(@"loc 1");
+        /* // this part isn't needed
+        // if alarmDate is before now, add a second alarm that is snoozing for, say, 5 seconds from now
+        if (0 && [alarmDate compare:[NSDate dateWithTimeIntervalSinceNow:1.5]] == NSOrderedDescending) { // if alarmDate is before now
+            NSLog(@"loc 2");
+            NSTimeInterval delayFromNow = 1.0;
+            NSLog(@"loc 3");
+            EKAlarm *snoozingAlarm = [EKAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:delayFromNow]];
+            // NSLog(@"can snooze = %@",@([snoozingAlarm respondsToSelector:@selector(isSnoozed)]));
+            NSLog(@"loc 4, snoozingAlarm = %@",snoozingAlarm);
+            if (! [snoozingAlarm respondsToSelector:@selector(isSnoozed)]) { // shouldn't be necessary but just in case
+                NSLog(@"loc 5, snoozingAlarm = %@",snoozingAlarm);
+                snoozingAlarm = (EKAlarm*)[EKSnoozableAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:delayFromNow]];
+                // NSLog(@"can snooze = %@",@([snoozingAlarm respondsToSelector:@selector(isSnoozed)]));
+                NSLog(@"loc 6, snoozingAlarm = %@",snoozingAlarm);
+            }
+            NSLog(@"loc 10, snoozingAlarm = %@",snoozingAlarm);
+            [snoozingAlarm setSnoozing:YES];
+            NSLog(@"loc 11, snoozingAlarm = %@",snoozingAlarm);
+            [reminder addAlarm:snoozingAlarm];
+            NSLog(@"loc 12");
+        }
+        */
+        [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:alarmDate]];
+        // NSLog(@"loc 13, reminder = %@", reminder);
+        // NSLog(@"loc 13, reminder.alarms.count = %@", @(reminder.alarms.count));
+        // NSLog(@"loc 13, reminder.alarms[0] = %@", reminder.alarms[0]);
+        // NSLog(@"loc 13, reminder.alarms[0].absoluteDate = %@", reminder.alarms[0].absoluteDate);
+    } else if (useAlarmOffset) {
+        if (normal_due) {
+            alarmDate = [NSDate dateWithTimeIntervalSinceNow:alarmOffset];
+            [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:alarmDate]];
+            if (dueDate   == nil)   dueDate = alarmDate;
+            if (startDate == nil) startDate = alarmDate;
+        } else {
+            [reminder addAlarm:[EKAlarm alarmWithRelativeOffset:alarmOffset]];
+            if (dueDate == nil) {
+                // offset is relative to dueDate so set the dueDate to now if not set
+                dueDate = [NSDate date];
+            }
+        }
+    }
+    // NSLog(@"loc 14");
+    if (dueDate) {
+        reminder.dueDateComponents = [[NSCalendar currentCalendar] components:(NSCalendarUnit)NSUIntegerMax fromDate:dueDate];
+        // note: also sets the start date
+    }
+    // NSLog(@"loc 15");
+    if (startDate) {
+        reminder.startDateComponents = [[NSCalendar currentCalendar] components:(NSCalendarUnit)NSUIntegerMax fromDate:startDate];
+    }
+    // NSLog(@"loc 16");
+    
+    // save the resulting reminder
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
+    // NSLog(@"loc 17");
     if (!success) {
         _print(stderr, @"%@: Error adding Reminder \"%@\": \t%@\n", MYNAME, reminder_id_str, [error localizedDescription]);
         return EXIT_FAIL_ADD;
     }
     return EXIT_NORMAL;
 }
+
+
+
+static BOOL continueWithReminder(NSString *label, EKReminder *reminder, NSUInteger reminder_id) {
+    int c;
+    int ans = -1;
+    _print(stdout, @"%@ reminder \"%@\" (y/N)? ",label,reminder.title);
+    while ((c=getchar()) && c!=10) {
+        // _print(stdout, @"char = %d (%c)\n", c, c);
+        if (c!=32 && c!=9 && ans<0) {
+            ans = c==(int)'y' || c==(int)'Y';
+            // _print(stdout, @"ans = %d\n", ans);
+        }
+    }
+    if (ans < 0)
+        ans = 0;
+    return ans != 0;
+}
+
 
 /*!
     @function removeReminder
@@ -520,12 +848,19 @@ static int addReminder(NSString *reminder_title)
         the reminder to be removed
     @description remove a specified reminder
  */
-static int removeReminder(EKReminder *reminder, NSString *reminder_id_str)
+static int removeReminder(EKReminder *reminder, NSUInteger reminder_id)
 {
+    if (!isUppercaseCommand && !continueWithReminder(@"Remove",reminder,reminder_id)) {
+        _print(stdout, @"not removed.\n");
+        return EXIT_NORMAL;
+    }
+    NSString *title = reminder.title;
     NSError *error;
     BOOL success = [store removeReminder:reminder commit:YES error:&error];
-    if (!success) {
-        _print(stderr, @"%@: Error removing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, reminder_id_str, reminder.title, reminder.calendar.title, [error localizedDescription]);
+    if (success) {
+        _print(stdout, @"removed reminder \"%@\"\n", title);
+    } else {
+        _print(stderr, @"%@: Error removing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, [error localizedDescription]);
         return EXIT_FAIL_RM;
     }
     return EXIT_NORMAL;
@@ -539,13 +874,20 @@ static int removeReminder(EKReminder *reminder, NSString *reminder_id_str)
         the reminder to mark as completed
     @description mark specified reminder as complete
  */
-static int completeReminder(EKReminder *reminder, NSString *reminder_id_str)
+static int completeReminder(EKReminder *reminder, NSUInteger reminder_id)
 {
+    if (!isUppercaseCommand && !continueWithReminder(@"Complete",reminder,reminder_id)) {
+        _print(stdout, @"not completed.\n");
+        return EXIT_NORMAL;
+    }
     reminder.completed = YES;
+    NSString *title = reminder.title;
     NSError *error;
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
-    if (!success) {
-        _print(stderr, @"%@: Error marking Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, reminder_id_str, reminder.title, reminder.calendar.title, [error localizedDescription]);
+    if (success) {
+        _print(stdout, @"completed reminder \"%@\"\n", title);
+    } else {
+        _print(stderr, @"%@: Error marking Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, [error localizedDescription]);
         return EXIT_FAIL_COMPLETE;
     }
     return EXIT_NORMAL;
@@ -559,14 +901,14 @@ static int completeReminder(EKReminder *reminder, NSString *reminder_id_str)
         the reminder to snooze
     @description change snooze on specified reminder to specific time
  */
-static int snoozeReminder(EKReminder *reminder, NSString *reminder_id_str, NSString *snoozeSecondsString)
+static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString *snoozeSecondsString)
 {
     if (reminder.completed) {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, reminder_id_str, reminder.title, reminder.calendar.title);
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_ALREADYCOMPLETED;
     }
     if (!reminder.hasAlarms || reminder.alarms==0 || reminder.alarms.count==0) {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, reminder_id_str, reminder.title, reminder.calendar.title);
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOALARMS;
     }
     NSUInteger nChanged = 0;
@@ -585,11 +927,11 @@ static int snoozeReminder(EKReminder *reminder, NSString *reminder_id_str, NSStr
         NSError *error;
         BOOL success = [store saveReminder:reminder commit:YES error:&error];
         if (!success) {
-            _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, reminder_id_str, reminder.title, reminder.calendar.title, [error localizedDescription]);
+            _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, [error localizedDescription]);
             return EXIT_FAIL_SNOOZE;
         }
     } else {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, reminder_id_str, reminder.title, reminder.calendar.title);
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOTSNOOZING;
     }
     return EXIT_NORMAL;
@@ -601,40 +943,62 @@ static int snoozeReminder(EKReminder *reminder, NSString *reminder_id_str, NSStr
     @returns an exit status (0 for no error)
     @description dispatch to correct function based on command-line argument
  */
-static int handleCommand()
+static int handleCommand(NSMutableArray *itemArgs)
 {
     switch (command) {
         case CMD_LS:
         case CMD_EVERY:
             listReminders(calendarTitle, command==CMD_EVERY);
+            return EXIT_NORMAL;
             break;
         case CMD_ADD:
-            return addReminder(reminder_id_str);
+            return addReminder(itemArgs);
             break;
-        case CMD_RM:
-            return removeReminder(reminder, reminder_id_str);
-            break;
-        case CMD_CAT:
-            showReminder(reminder,YES,YES,YES);
-            break;
-        case CMD_DONE:
-            return completeReminder(reminder, reminder_id_str);
-            break;
-        case CMD_SNOOZE:
-            return snoozeReminder(reminder, reminder_id_str, snoozeSecondsString);
         case CMD_HELP:
         case CMD_VERSION:
         case CMD_UNKNOWN:
+            return EXIT_NORMAL;
+            break;
+        default:
             break;
     }
-    return 0;
+    while (1) {
+        EKReminder *reminder = nil;
+        NSUInteger reminder_id = 0;
+        int exitStatus = nextReminderFromArgs(itemArgs, &reminder, &reminder_id);
+        if (exitStatus!=EXIT_NORMAL || reminder==nil)
+            return exitStatus;
+        switch (command) {
+            case CMD_RM:
+                exitStatus = removeReminder(reminder, reminder_id);
+                break;
+            case CMD_CAT:
+                showReminder(reminder,YES,YES,YES);
+                break;
+            case CMD_DONE:
+                exitStatus = completeReminder(reminder, reminder_id);
+                break;
+            case CMD_SNOOZE:
+                exitStatus = snoozeReminder(reminder, reminder_id, snoozeSecondsString);
+                break;
+            default:
+                break;
+        }
+        if (exitStatus != EXIT_NORMAL)
+            return exitStatus;
+    }
+    return EXIT_NORMAL;
 }
 
 int main(int argc, const char * argv[]) {
     int exitStatus = 0;
 
     @autoreleasepool {
-        exitStatus = parseArguments();
+        
+        useAdvanced = [@"johnsone" isEqualToString:NSUserName()];
+        
+        NSMutableArray *itemArgs;
+        exitStatus = parseArguments(&itemArgs);
         if (exitStatus)
             return exitStatus==EXIT_CLEAN ? 0 : exitStatus;
         
@@ -658,7 +1022,7 @@ int main(int argc, const char * argv[]) {
 
         exitStatus = validateArguments();
         if (! exitStatus)
-            exitStatus = handleCommand();
+            exitStatus = handleCommand(itemArgs);
     }
     return exitStatus==EXIT_CLEAN ? 0 : exitStatus;
 }

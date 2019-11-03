@@ -10,6 +10,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface EKSnoozableAlarm : EKAlarm {
+    bool isSnoozed;
+}
+@property (nonatomic) bool isSnoozed;
+@end
+
 @interface EKAlarm (stringWith)
 
 NSString *structuredLocationString(EKStructuredLocation *loc);
@@ -18,6 +24,7 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (BOOL)hasSnooze;
 - (BOOL)noSnooze;
 - (BOOL)snoozing;
+- (void)setSnoozing:(BOOL)newSnoozed;
 - (NSString *)stringWithDateFormatter:(NSFormatter*)formatter;
 
 - (EKAlarm *)duplicateAlarm;

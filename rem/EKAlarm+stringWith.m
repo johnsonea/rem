@@ -8,11 +8,6 @@
 
 #import "EKAlarm+stringWith.h"
 
-@interface EKSnoozableAlarm : EKAlarm {
-    bool isSnoozed;
-}
-@property (nonatomic) bool isSnoozed;
-@end
 @implementation EKSnoozableAlarm
 @synthesize isSnoozed;
 @end
@@ -50,6 +45,9 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
 }
 - (BOOL)snoozing { // need different name from isSnoozed
     return [self hasSnooze] ? [(EKSnoozableAlarm*)self isSnoozed] : NO;
+}
+- (void)setSnoozing:(BOOL)newSnoozed { // setIsSnoozed caused problems
+    ((EKSnoozableAlarm*)self).isSnoozed = newSnoozed;
 }
 
 - (NSString *)stringWithDateFormatter:(NSDateFormatter *)formatter {
