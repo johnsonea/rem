@@ -11,9 +11,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface EKSnoozableAlarm : EKAlarm {
-    bool isSnoozed;
+    BOOL isSnoozed;
 }
-@property (nonatomic) bool isSnoozed;
+@property (nonatomic) BOOL isSnoozed;
 @end
 
 @interface EKAlarm (stringWith)
