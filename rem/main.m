@@ -546,59 +546,59 @@ int scanDoubleAlone(NSString *str, double *ref) {
 int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
     NSRange r;
     NSError *error = NULL;
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS: substr=%@",substr);
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS: substr=%@",substr);
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*(?:(\\d+(?:\\.\\d*)?)\\s*d)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*h)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*m)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*s?)?\\s*$" options:NSRegularExpressionCaseInsensitive error:&error];
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
     if (error != nil) {
         _print(stderr, @"%@: illegal DHMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), localizedUnderlyingError(error));
         return EXIT_FATAL;
     }
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 2");
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 2");
     NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
     if (match == nil)
         return EXIT_CLEAN;
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
     *secsRef = 0.0;
     r=[match rangeAtIndex:1]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*86400.0;
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
     r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
     r=[match rangeAtIndex:3]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
     r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
     return EXIT_NORMAL;
 }
 int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
     NSRange r;
     NSError *error = NULL;
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*(?:(?:(?:(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(?:\\.\\d*)?)$" options:NSRegularExpressionCaseInsensitive error:&error];
-    NSLog(@"parseTimeSeparatedByColons 1, regex = %@",regex);
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 1, regex = %@",regex);
     if (error != nil) {
         _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), localizedUnderlyingError(error));
         return EXIT_FATAL;
     }
-    NSLog(@"parseTimeSeparatedByColons 2");
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 2");
     // location==NSNotFound ==> range is blank
     NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
     if (match == nil)
         return EXIT_CLEAN;
-    NSLog(@"parseTimeSeparatedByColons 3, match = %@",match);
-    NSLog(@"parseTimeSeparatedByColons 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
-    NSLog(@"parseTimeSeparatedByColons 5, match.numberOfRanges = %@",@(match.numberOfRanges));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 3, match = %@",match);
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 5, match.numberOfRanges = %@",@(match.numberOfRanges));
     *secsRef = 0.0;
     r=[match rangeAtIndex:1]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*86400.0;
-    NSLog(@"parseTimeSeparatedByColons 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
     r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*3600.0;
-    NSLog(@"parseTimeSeparatedByColons 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
     r=[match rangeAtIndex:3]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*60.0;
-    NSLog(@"parseTimeSeparatedByColons 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
     r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
-    NSLog(@"parseTimeSeparatedByColons 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
-    NSLog(@"parseTimeSeparatedByColons 99, secs = %@",@(*secsRef));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 99, secs = %@",@(*secsRef));
     return EXIT_NORMAL;
 }
 
