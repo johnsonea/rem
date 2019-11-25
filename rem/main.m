@@ -478,7 +478,7 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         }
         if (reminder.hasAlarms && reminder.alarms) {
             for (NSUInteger i=0; i<reminder.alarms.count; i++) {
-                _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [reminder.alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime]);
+                _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [reminder.alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime forReminder:reminder]);
             }
         }
     }
@@ -699,7 +699,8 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
             NSString *str = [itemArgs shift];
             // if ([swtch isEqualToString:@"due"]) swtch = @"date"; // "due" is a synonym for "date" in the non-advanced switches
             NSString *label = [swtch isEqualToString:@"date"] ? @"reminder" : swtch;
-            NSDate *absoluteDate;  NSTimeInterval relativeOffset;
+            NSDate *absoluteDate;
+            NSTimeInterval relativeOffset;
             int res = stringToAbsoluteDateOrRelativeOffset(str,label,&absoluteDate,&relativeOffset);
             if (res != EXIT_NORMAL)
                 return EXIT_NORMAL;

@@ -23,8 +23,8 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
 - (NSString *)proximityStr {
     return
     self.proximity == EKAlarmProximityNone ? @"" :
-    self.proximity == EKAlarmProximityEnter ? [NSString stringWithFormat:@" arriving at %@",structuredLocationString(self.structuredLocation)] :
-    self.proximity == EKAlarmProximityLeave ? [NSString stringWithFormat:@" leaving from %@",structuredLocationString(self.structuredLocation)] :
+    self.proximity == EKAlarmProximityEnter ? [NSString stringWithFormat:@" arriving=%@",structuredLocationString(self.structuredLocation)] :
+    self.proximity == EKAlarmProximityLeave ? [NSString stringWithFormat:@" leaving=%@",structuredLocationString(self.structuredLocation)] :
     [NSString stringWithFormat:@" %@", @(self.proximity)];
 }
 
@@ -51,7 +51,10 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
 }
 
 - (NSString *)stringWithDateFormatter:(NSDateFormatter * _Nullable)formatter {
-    if (self==nil) return self.description;
+    return [self stringWithDateFormatter:formatter forReminder:nil];
+}
+- (NSString *)stringWithDateFormatter:(NSDateFormatter * _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder {
+    if (self==nil) return self.description; // don't think this can happen but just in case
     if (formatter==nil) {
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
         formatter = [[NSDateFormatter alloc] init];
@@ -60,8 +63,17 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
         formatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
     }
     NSString *snoozed = [self noSnooze] ? @"?" : [(EKSnoozableAlarm*)self isSnoozed] ? @"1" : @"0";
-    return [NSString stringWithFormat:@"type=%@ snoozed=%@ %@=%@%@%@%@",[self typeString], snoozed, self.absoluteDate ? @"absDate" : @"relOffset", self.absoluteDate ? @"\"" : @"", self.absoluteDate ?
-            [formatter stringFromDate:self.absoluteDate] : @(self.relativeOffset), self.absoluteDate ? @"\"" : @"", [self proximityStr]];
+    NSString *ans = [NSString stringWithFormat:@"type=%@ snoozed=%@", [self typeString], snoozed];
+    if (self.absoluteDate)
+        ans = [NSString stringWithFormat:@"%@ when=\"%@\"",ans,[formatter stringFromDate:self.absoluteDate]];
+    else if (reminder && reminder.dueDateComponents)
+        ans = [NSString stringWithFormat:@"%@ when=%@%@+\"%@\"",ans
+               , self.relativeOffset>=0 ? @"+" : @""
+               , @(self.relativeOffset)
+               , [formatter stringFromDate:[[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]]
+               ];
+    ans = [NSString stringWithFormat:@"%@%@",ans,[self proximityStr]];
+    return ans;
     // NSDate *absoluteDate
     // NSTimeInterval(=double) relativeOffset;
     // proximity

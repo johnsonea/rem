@@ -25,7 +25,8 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (BOOL)noSnooze;
 - (BOOL)snoozing;
 - (void)setSnoozing:(BOOL)newSnoozed;
-- (NSString *)stringWithDateFormatter:(NSFormatter* _Nullable)formatter;
+- (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
+- (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
 
 - (EKAlarm *)duplicateAlarm;
 - (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate;
