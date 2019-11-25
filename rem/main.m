@@ -348,6 +348,15 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             return EXIT_INVARG_BADTITLE;
         }
         *reminderRef = filteredReminders[0];
+        NSDictionary *cals = calendarTitle ? @{calendarTitle:reminders} : calendars;
+        for (calendarTitle in cals) {
+            reminders = calendars[calendarTitle];
+            *reminder_id_ref = [reminders indexOfObject:*reminderRef];
+            if (*reminder_id_ref == NSNotFound)
+                *reminder_id_ref = 0;
+            else
+                break;
+        }
     } else if (calendarTitle == nil) {
         _print(stderr, @"%@: Error - can only specify a reminder by number when also specifying the reminder List\n", MYNAME);
         return EXIT_INVARG_NOTALLCALENDARS;
@@ -913,8 +922,8 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_ALREADYCOMPLETED;
     }
-    if (!reminder.hasAlarms || reminder.alarms==0 || reminder.alarms.count==0) {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+    if (!reminder.hasAlarms || reminder.alarms==nil || reminder.alarms.count==0) {
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list % has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOALARMS;
     }
     NSUInteger nChanged = 0;
@@ -972,6 +981,7 @@ static int handleCommand(NSMutableArray *itemArgs)
     while (1) {
         EKReminder *reminder = nil;
         NSUInteger reminder_id = 0;
+        NSString *prevCalendarTitle = calendarTitle;
         int exitStatus = nextReminderFromArgs(itemArgs, &reminder, &reminder_id);
         if (exitStatus!=EXIT_NORMAL || reminder==nil)
             return exitStatus;
@@ -993,6 +1003,7 @@ static int handleCommand(NSMutableArray *itemArgs)
         }
         if (exitStatus != EXIT_NORMAL)
             return exitStatus;
+        calendarTitle = prevCalendarTitle;
     }
     return EXIT_NORMAL;
 }
