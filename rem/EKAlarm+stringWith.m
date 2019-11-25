@@ -53,9 +53,6 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
 - (NSString *)stringWithDateFormatter:(NSDateFormatter *)formatter {
     if (self==nil) return self.description;
     NSString *snoozed = [self noSnooze] ? @"?" : [(EKSnoozableAlarm*)self isSnoozed] ? @"1" : @"0";
-    [formatter stringFromDate:self.absoluteDate];
-    [self proximityStr];
-    [self typeString];
     return [NSString stringWithFormat:@"type=%@ snoozed=%@ %@=%@%@%@%@",[self typeString], snoozed, self.absoluteDate ? @"absDate" : @"relOffset", self.absoluteDate ? @"\"" : @"", self.absoluteDate ?
             [formatter stringFromDate:self.absoluteDate] : @(self.relativeOffset), self.absoluteDate ? @"\"" : @"", [self proximityStr]];
     // NSDate *absoluteDate
