@@ -72,6 +72,16 @@ static NSArray<EKReminder*> *allReminders;
 #define PIPER  @"│  "
 #define SPACER @"   "
 
+NSString *localizedUnderlyingError(NSError *error) {
+    NSString *extraMessage = nil;
+    NSDictionary *userInfo = [error userInfo];
+    NSError *underlyingError = [userInfo objectForKey:NSUnderlyingErrorKey];
+    if (userInfo && underlyingError)
+        extraMessage = underlyingError.localizedDescription;
+    return extraMessage && extraMessage.length>0 ? [NSString stringWithFormat:@"%@ (%@)",error.localizedDescription,extraMessage] : error.localizedDescription;
+}
+
+
 /*!
     @function _print
     @abstract Wrapper for fprintf with NSString format
@@ -537,10 +547,10 @@ int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
     NSRange r;
     NSError *error = NULL;
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS: substr=%@",substr);
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*((\\d+(\\.\\d*)?)\\s*d)?\\s*((\\d+(\\.\\d*)?)\\s*h)?\\s*((\\d+(\\.\\d*)?)\\s*m)?\\s*((\\d+(\\.\\d*)?)\\s*s?)?\\s*$" options:NSRegularExpressionCaseInsensitive error:&error];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*(?:(\\d+(?:\\.\\d*)?)\\s*d)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*h)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*m)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*s?)?\\s*$" options:NSRegularExpressionCaseInsensitive error:&error];
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
     if (error != nil) {
-        _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), error.localizedDescription);
+        _print(stderr, @"%@: illegal DHMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), localizedUnderlyingError(error));
         return EXIT_FATAL;
     }
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 2");
@@ -550,30 +560,25 @@ int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
-    r = [match rangeAtIndex:2];
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 6, match.range[2] = [%@,%@]",@(r.location),@(r.length));
-    r = [match rangeAtIndex:5];
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 7, match.range[5] = [%@,%@]",@(r.location),@(r.length));
-    r = [match rangeAtIndex:8];
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 8, match.range[8] = [%@,%@]",@(r.location),@(r.length));
-    r = [match rangeAtIndex:11];
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 9, match.range[11] = [%@,%@]",@(r.location),@(r.length));
-    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 10");
     *secsRef = 0.0;
-    r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*86400.0;
-    r=[match rangeAtIndex:5]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
-    r=[match rangeAtIndex:8]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
-    r=[match rangeAtIndex:11]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    r=[match rangeAtIndex:1]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*86400.0;
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
+    r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
+    r=[match rangeAtIndex:3]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
+    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
     if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
     return EXIT_NORMAL;
 }
 int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
     NSRange r;
     NSError *error = NULL;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*((((\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(\\.\\d*)?)$" options:NSRegularExpressionCaseInsensitive error:&error];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*(?:(?:(?:(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(?:\\.\\d*)?)$" options:NSRegularExpressionCaseInsensitive error:&error];
     NSLog(@"parseTimeSeparatedByColons 1, regex = %@",regex);
     if (error != nil) {
-        _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), error.localizedDescription);
+        _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), localizedUnderlyingError(error));
         return EXIT_FATAL;
     }
     NSLog(@"parseTimeSeparatedByColons 2");
@@ -584,21 +589,15 @@ int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
     NSLog(@"parseTimeSeparatedByColons 3, match = %@",match);
     NSLog(@"parseTimeSeparatedByColons 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
     NSLog(@"parseTimeSeparatedByColons 5, match.numberOfRanges = %@",@(match.numberOfRanges));
-    r = [match rangeAtIndex:4];
-    NSLog(@"parseTimeSeparatedByColons 6, match.range[4] = [%@,%@]",@(r.location),@(r.length));
-    r = [match rangeAtIndex:5];
-    NSLog(@"parseTimeSeparatedByColons 7, match.range[5] = [%@,%@]",@(r.location),@(r.length));
-    r = [match rangeAtIndex:6];
-    NSLog(@"parseTimeSeparatedByColons 8, match.range[6] = [%@,%@]",@(r.location),@(r.length));
-    r = [match rangeAtIndex:7];
-    NSLog(@"parseTimeSeparatedByColons 9, match.range[7] = [%@,%@]",@(r.location),@(r.length));
-    NSLog(@"parseTimeSeparatedByColons 10");
-    // NSRange matchRange = [match range];
     *secsRef = 0.0;
-    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*86400.0;
-    r=[match rangeAtIndex:5]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*3600.0;
-    r=[match rangeAtIndex:6]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*60.0;
-    r=[match rangeAtIndex:7]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    r=[match rangeAtIndex:1]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*86400.0;
+    NSLog(@"parseTimeSeparatedByColons 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
+    r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*3600.0;
+    NSLog(@"parseTimeSeparatedByColons 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
+    r=[match rangeAtIndex:3]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*60.0;
+    NSLog(@"parseTimeSeparatedByColons 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
+    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    NSLog(@"parseTimeSeparatedByColons 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
     NSLog(@"parseTimeSeparatedByColons 99, secs = %@",@(*secsRef));
     return EXIT_NORMAL;
 }
@@ -638,7 +637,7 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
         NSError *error = nil;
         NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeDate error:&error];
         if (detector == nil) {
-            _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), error.localizedDescription);
+            _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), localizedUnderlyingError(error));
             return EXIT_INVARG_BADDATADETECTOR;
         }
         NSUInteger nMatches = [detector numberOfMatchesInString:str options:0 range:NSMakeRange(0, [str length])];
@@ -820,7 +819,8 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     BOOL success = [store saveReminder:reminder commit:YES error:&error];
     // NSLog(@"loc 17");
     if (!success) {
-        _print(stderr, @"%@: Error adding Reminder \"%@\": \t%@\n", MYNAME, reminder_id_str, [error localizedDescription]);
+        _print(stderr, @"%@: Error adding Reminder \"%@\": \t%@\n", MYNAME, reminderTitle, localizedUnderlyingError(error));
+        NSLog(@"error = %@",error);
         return EXIT_FAIL_ADD;
     }
     return EXIT_NORMAL;
@@ -865,7 +865,7 @@ static int removeReminder(EKReminder *reminder, NSUInteger reminder_id)
     if (success) {
         _print(stdout, @"removed reminder \"%@\"\n", title);
     } else {
-        _print(stderr, @"%@: Error removing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, [error localizedDescription]);
+        _print(stderr, @"%@: Error removing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
         return EXIT_FAIL_RM;
     }
     return EXIT_NORMAL;
@@ -892,7 +892,7 @@ static int completeReminder(EKReminder *reminder, NSUInteger reminder_id)
     if (success) {
         _print(stdout, @"completed reminder \"%@\"\n", title);
     } else {
-        _print(stderr, @"%@: Error marking Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, [error localizedDescription]);
+        _print(stderr, @"%@: Error marking Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
         return EXIT_FAIL_COMPLETE;
     }
     return EXIT_NORMAL;
@@ -929,10 +929,11 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     if (nChanged > 0) {
         alarms = [alarms copy]; // make it immutable again
         reminder.alarms = alarms;
+        // TO DO: should I be removing obsolete alarms with removeAlarm: and adding addAlarm: to add the modified ones?
         NSError *error;
         BOOL success = [store saveReminder:reminder commit:YES error:&error];
         if (!success) {
-            _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, [error localizedDescription]);
+            _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
             return EXIT_FAIL_SNOOZE;
         }
     } else {
@@ -1016,7 +1017,7 @@ int main(int argc, const char * argv[]) {
         // init with access to Reminders
         NSError *error;
         if ((store=[store initWithAccessToRemindersReturningError:&error]) == nil) {
-            _print(stderr, @"%@: %@.\n", MYNAME,[error localizedDescription]);
+            _print(stderr, @"%@: %@.\n", MYNAME,localizedUnderlyingError(error));
             return (int) error.code;
         }
 
