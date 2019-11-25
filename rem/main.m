@@ -758,6 +758,10 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     reminder.title = reminderTitle;
     reminder.priority = priority;
     if (noteString) reminder.notes=noteString;
+    if (alarmDate==nil && useAlarmOffset && normal_due) {
+        alarmDate = [NSDate dateWithTimeIntervalSinceNow:alarmOffset];
+        useAlarmOffset = NO;
+    }
     if (alarmDate) {
         if (normal_due) {
             if (dueDate   == nil)   dueDate = alarmDate;
@@ -792,18 +796,13 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
         // NSLog(@"loc 13, reminder.alarms[0] = %@", reminder.alarms[0]);
         // NSLog(@"loc 13, reminder.alarms[0].absoluteDate = %@", reminder.alarms[0].absoluteDate);
     } else if (useAlarmOffset) {
-        if (normal_due) {
-            alarmDate = [NSDate dateWithTimeIntervalSinceNow:alarmOffset];
-            [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:alarmDate]];
-            if (dueDate   == nil)   dueDate = alarmDate;
-            if (startDate == nil) startDate = alarmDate;
-        } else {
-            [reminder addAlarm:[EKAlarm alarmWithRelativeOffset:alarmOffset]];
-            if (dueDate == nil) {
-                // offset is relative to dueDate so set the dueDate to now if not set
-                dueDate = [NSDate date];
-            }
+        // if (normal_due) {not needed because handled above} else {
+        [reminder addAlarm:[EKAlarm alarmWithRelativeOffset:alarmOffset]];
+        if (dueDate == nil) {
+            // offset is relative to dueDate so set the dueDate to now if not set
+            dueDate = [NSDate date];
         }
+        // } // if (normal_due)
     }
     // NSLog(@"loc 14");
     if (dueDate) {
