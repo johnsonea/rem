@@ -56,7 +56,6 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
 - (NSString *)stringWithDateFormatter:(NSDateFormatter * _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder {
     if (self==nil) return self.description; // don't think this can happen but just in case
     if (formatter==nil) {
-        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
         formatter = [[NSDateFormatter alloc] init];
         formatter.dateStyle = NSDateFormatterShortStyle;
         formatter.timeStyle = NSDateFormatterLongStyle;
