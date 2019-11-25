@@ -113,7 +113,7 @@ static void _usage()
     _print(stdout, @"Usage:\n");
     _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ rm <list> <item> [<item2> ...]\n\t\tRemove reminder(s) from list\n",MYNAME);
-    _print(stdout, @"\t%@ add [--due <date> | --due <timeFromNow>] [--note <note>] ...\n\t%@     [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,useAdvanced?[NSString stringWithFormat:@"... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]]... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]]... \n\t%@     [--DATE  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES]:@"");
+    _print(stdout, @"\t%@ add [--due <date> | --due <timeFromNow>] [--note <note>] ...\n\t%@     [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,useAdvanced?[NSString stringWithFormat:@" ... \n\t%@     [--advanced] ... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--ALARM  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES,SPACES]:@"");
     _print(stdout, @"\t%@ cat <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n",MYNAME);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
