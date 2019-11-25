@@ -50,8 +50,15 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     ((EKSnoozableAlarm*)self).isSnoozed = newSnoozed;
 }
 
-- (NSString *)stringWithDateFormatter:(NSDateFormatter *)formatter {
+- (NSString *)stringWithDateFormatter:(NSDateFormatter * _Nullable)formatter {
     if (self==nil) return self.description;
+    if (formatter==nil) {
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        formatter = [[NSDateFormatter alloc] init];
+        formatter.dateStyle = NSDateFormatterShortStyle;
+        formatter.timeStyle = NSDateFormatterLongStyle;
+        formatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+    }
     NSString *snoozed = [self noSnooze] ? @"?" : [(EKSnoozableAlarm*)self isSnoozed] ? @"1" : @"0";
     return [NSString stringWithFormat:@"type=%@ snoozed=%@ %@=%@%@%@%@",[self typeString], snoozed, self.absoluteDate ? @"absDate" : @"relOffset", self.absoluteDate ? @"\"" : @"", self.absoluteDate ?
             [formatter stringFromDate:self.absoluteDate] : @(self.relativeOffset), self.absoluteDate ? @"\"" : @"", [self proximityStr]];
