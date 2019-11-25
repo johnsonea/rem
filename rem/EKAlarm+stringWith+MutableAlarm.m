@@ -1,15 +1,17 @@
 //
-//  EKAlarm+stringWith.m
+//  EKAlarm+stringWith+MutableAlarm.m
 //  rem
 //
 //  Created by Erik A Johnson on 10/29/19.
-//  Copyright © 2019 kykim, inc. All rights reserved.
+//  Copyright © 2019 Erik A Johnson. All rights reserved.
 //
 
-#import "EKAlarm+stringWith.h"
+#import "EKAlarm+stringWith+MutableAlarm.h"
 
-@implementation EKSnoozableAlarm
+@implementation EKMutableAlarm
+@synthesize sharedUID;
 @synthesize isSnoozed;
+@synthesize isDefault;
 @end
 
 
@@ -44,10 +46,10 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     return ![self hasSnooze];
 }
 - (BOOL)snoozing { // need different name from isSnoozed
-    return [self hasSnooze] ? [(EKSnoozableAlarm*)self isSnoozed] : NO;
+    return [self hasSnooze] ? [(EKMutableAlarm*)self isSnoozed] : NO;
 }
 - (void)setSnoozing:(BOOL)newSnoozed { // setIsSnoozed caused problems
-    ((EKSnoozableAlarm*)self).isSnoozed = newSnoozed;
+    ((EKMutableAlarm*)self).isSnoozed = newSnoozed;
 }
 
 - (NSString *)stringWithDateFormatter:(NSDateFormatter * _Nullable)formatter {
@@ -61,7 +63,7 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
         formatter.timeStyle = NSDateFormatterLongStyle;
         formatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
     }
-    NSString *snoozed = [self noSnooze] ? @"?" : [(EKSnoozableAlarm*)self isSnoozed] ? @"1" : @"0";
+    NSString *snoozed = [self noSnooze] ? @"?" : [(EKMutableAlarm*)self isSnoozed] ? @"1" : @"0";
     NSString *ans = [NSString stringWithFormat:@"type=%@ snoozed=%@", [self typeString], snoozed];
     if (self.absoluteDate)
         ans = [NSString stringWithFormat:@"%@ when=\"%@\"",ans,[formatter stringFromDate:self.absoluteDate]];

@@ -10,7 +10,7 @@
 
 #import <Foundation/Foundation.h>
 #import <EventKit/EventKit.h>
-#import "EKAlarm+stringWith.h"
+#import "EKAlarm+stringWith+MutableAlarm.h"
 #import "EKEventStore+Synchronous.h"
 #import "errors.h"
 #import "EKReminder+Snoozing.h"
@@ -639,7 +639,7 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
         // }
         if (hasNegative)
             secs = - secs;
-        NSLog(@"stringToAbsoluteDateOrRelativeOffset: secs = %@",@(secs));
+        // NSLog(@"stringToAbsoluteDateOrRelativeOffset: secs = %@",@(secs));
         *relativeOffsetRef = (NSTimeInterval)secs;
         *absoluteDateRef = nil; // shouldn't be necessary but just in case
     } else {
@@ -788,7 +788,7 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
             NSLog(@"loc 4, snoozingAlarm = %@",snoozingAlarm);
             if (! [snoozingAlarm respondsToSelector:@selector(isSnoozed)]) { // shouldn't be necessary but just in case
                 NSLog(@"loc 5, snoozingAlarm = %@",snoozingAlarm);
-                snoozingAlarm = (EKAlarm*)[EKSnoozableAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:delayFromNow]];
+                snoozingAlarm = (EKAlarm*)[EKMutableAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:delayFromNow]];
                 // NSLog(@"can snooze = %@",@([snoozingAlarm respondsToSelector:@selector(isSnoozed)]));
                 NSLog(@"loc 6, snoozingAlarm = %@",snoozingAlarm);
             }

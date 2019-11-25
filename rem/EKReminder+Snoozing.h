@@ -7,7 +7,7 @@
 //
 
 #import <EventKit/EventKit.h>
-#import "EKAlarm+stringWith.h"
+#import "EKAlarm+stringWith+MutableAlarm.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

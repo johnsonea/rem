@@ -1,19 +1,23 @@
 //
-//  EKAlarm+stringWith.h
+//  EKAlarm+stringWith+MutableAlarm.h
 //  rem
 //
 //  Created by Erik A Johnson on 10/29/19.
-//  Copyright © 2019 kykim, inc. All rights reserved.
+//  Copyright © 2019 Erik A Johnson. All rights reserved.
 //
 
 #import <EventKit/EventKit.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface EKSnoozableAlarm : EKAlarm {
+@interface EKMutableAlarm : EKAlarm {
+    BOOL isDefault;
     BOOL isSnoozed;
+    NSString *sharedUID;
 }
-@property (nonatomic) BOOL isSnoozed;
+@property(readonly, nonatomic) NSString *sharedUID; // @synthesize sharedUID;
+@property(nonatomic) BOOL isSnoozed; // @synthesize isSnoozed;
+@property(readonly, nonatomic) BOOL isDefault; // @synthesize isDefault;
 @end
 
 @interface EKAlarm (stringWith)
