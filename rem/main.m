@@ -536,35 +536,35 @@ int scanDoubleAlone(NSString *str, double *ref) {
 int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
     NSRange r;
     NSError *error = NULL;
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS: substr=%@",substr);
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*((\\d+(\\.\\d*)?)\\s*d)?\\s*((\\d+(\\.\\d*)?)\\s*h)?\\s*((\\d+(\\.\\d*)?)\\s*m)?\\s*((\\d+(\\.\\d*)?)\\s*s?)?\\s*$" options:NSRegularExpressionCaseInsensitive error:&error];
-    NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
     if (error != nil) {
         _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), error.localizedDescription);
         return EXIT_FATAL;
     }
-    NSLog(@"parseTimeSeparatedByDHMS 2");
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 2");
     NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
     if (match == nil)
         return EXIT_CLEAN;
-    NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
-    NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
-    NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
     r = [match rangeAtIndex:2];
-    NSLog(@"parseTimeSeparatedByDHMS 6, match.range[2] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 6, match.range[2] = [%@,%@]",@(r.location),@(r.length));
     r = [match rangeAtIndex:5];
-    NSLog(@"parseTimeSeparatedByDHMS 7, match.range[5] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 7, match.range[5] = [%@,%@]",@(r.location),@(r.length));
     r = [match rangeAtIndex:8];
-    NSLog(@"parseTimeSeparatedByDHMS 8, match.range[8] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 8, match.range[8] = [%@,%@]",@(r.location),@(r.length));
     r = [match rangeAtIndex:11];
-    NSLog(@"parseTimeSeparatedByDHMS 9, match.range[11] = [%@,%@]",@(r.location),@(r.length));
-    NSLog(@"parseTimeSeparatedByDHMS 10");
-    // NSRange matchRange = [match range];
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 9, match.range[11] = [%@,%@]",@(r.location),@(r.length));
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 10");
     *secsRef = 0.0;
     r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*86400.0;
-    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
-    r=[match rangeAtIndex:6]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
-    r=[match rangeAtIndex:8]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
-    NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
+    r=[match rangeAtIndex:5]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
+    r=[match rangeAtIndex:8]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
+    r=[match rangeAtIndex:11]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
+    if (DEBUG) NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
     return EXIT_NORMAL;
 }
 int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
@@ -690,7 +690,9 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     // NSLog(@"addReminder: itemArgs=%@",[itemArgs componentsJoinedByString:@","]);
     while ([[itemArgs firstObject] hasPrefix:SWITCH_LONGDASH]) {
         NSString *swtch = [[itemArgs shift] substringFromIndex:[SWITCH_LONGDASH length]];
-        if ([swtch isEqualToString:@"date"]//||[swtch isEqualToString:@"due"]
+        if ([swtch isEqualToString:@"advanced"]) {
+            useAdvanced = YES;
+        } else if ([swtch isEqualToString:@"date"]//||[swtch isEqualToString:@"due"]
             || ([swtch isEqualToString:@"DUE"]&&useAdvanced)
             || ([swtch isEqualToString:@"ALARM"]&&useAdvanced)
             || ([swtch isEqualToString:@"START"]&&useAdvanced)
