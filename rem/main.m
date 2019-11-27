@@ -17,6 +17,7 @@
 #import "NSObject+performSelectorSafely.h"
 #import "EKReminder+Snoozing.h"
 #import "NSMutableArray+Queue.h"
+#import <CoreLocation/CoreLocation.h>
 
 /*
  TO DO:
@@ -778,6 +779,10 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     // assume rest of arguments are the title of the new reminder
     NSString *reminderTitle = [[itemArgs subarrayWithRange:NSMakeRange(0, [itemArgs count])] componentsJoinedByString:@" "];
     [itemArgs removeAllObjects];
+    if (!reminderTitle || !reminderTitle.length) {
+        _print(stderr, @"%@: cannot \"add\" with an empty title\n", MYNAME);
+        return EXIT_INVARG_BADTITLE;
+    }
     
     // create the reminder
     reminder = [EKReminder reminderWithEventStore:store];
