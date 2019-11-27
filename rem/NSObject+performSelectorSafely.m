@@ -150,7 +150,16 @@
     return 0;
 }
 
-
+/*
+ Note: one can also use the following to get 
+    Method m = class_getInstanceMethod([self class], @selector(selector));
+    Method n = class_getClassMethod([self class], @selector(selector));
+    char ret[ 256 ];
+    method_getReturnType( m, ret, 256 );
+    NSLog( @"instance return type: %s", ret );
+    method_getReturnType( n, ret, 256 );
+    NSLog( @"class return type: %s", ret );
+ */
 
 
 @end
