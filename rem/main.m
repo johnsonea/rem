@@ -13,6 +13,8 @@
 #import "EKAlarm+stringWith+MutableAlarm.h"
 #import "EKEventStore+Synchronous.h"
 #import "errors.h"
+#import "main.h"
+#import "NSObject+performSelectorSafely.h"
 #import "EKReminder+Snoozing.h"
 #import "NSMutableArray+Queue.h"
 
@@ -94,7 +96,7 @@ NSString *localizedUnderlyingError(NSError *error) {
     @discussion Wraps call to fprintf with an NSString format argument, permitting use of the
         object formatter '%@'
  */
-static void _print(FILE *file, NSString *format, ...)
+void _print(FILE *file, NSString *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -434,6 +436,7 @@ static void _printReminderLine(NSUInteger id, NSString *line, BOOL last, BOOL la
         creation date), start date (if defined), due date (if defined), completed date (if completed),
         priority, local ID, recurrence rules (if any), alarms (if any), notes (if defined)
  */
+BOOL showReminderUndocumentedPropertiesWarning = YES;
 static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder, BOOL lastCalendar)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
@@ -478,9 +481,10 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
             NSString *completedDateStr = reminder.completionDate ? [dateFormatterShortDateLongTime stringFromDate:reminder.completionDate] : @"yes";
             _print(stdout, @"%@Completed: %@\n", indent, completedDateStr);
         }
-        _print(stdout, @"%@Priority: %@\n", indent, [NSString stringWithFormat:@"%@",@(reminder.priority)]);
+        _print(stdout, @"%@Priority: %@\n", indent, @(reminder.priority));
         _print(stdout, @"%@Local ID: %@\n", indent, reminder.calendarItemIdentifier);
         if (reminder.hasRecurrenceRules && reminder.recurrenceRules) {
+            if ([reminder respondsToSelector:@selector(humanReadableRecurrenceDescription)]) _print(stdout, @"%@Recurrence Description: %@\n", indent, [reminder performSelector:@selector(humanReadableRecurrenceDescription)]);
             for (NSUInteger i=0; i<reminder.recurrenceRules.count; i++) {
                 _print(stdout, @"%@Recurrence Rule %@: %@\n", indent, @(i+1), reminder.recurrenceRules[i].description); // NOTE: .description is decent though could make it more humanly readable
             }
@@ -489,6 +493,20 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
             for (NSUInteger i=0; i<reminder.alarms.count; i++) {
                 _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [reminder.alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime forReminder:reminder]);
             }
+        }
+        if (SHOW_UNDOCUMENTED) { // undocumented properties
+            if (showReminderUndocumentedPropertiesWarning) {
+                NSLog(@"showing undocumented reminder properties");
+                showReminderUndocumentedPropertiesWarning = NO;
+            }
+            if ([reminder respondsToSelector:@selector(_sharedUID)])
+                _print(stdout, @"%@_sharedUID: %@\n", indent, [reminder performSelector:@selector(_sharedUID)]);
+            // if ([[reminder class] respondsToSelector:@selector(actionStringsDisplayName)]) _print(stdout, @"%@actionStringsDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsDisplayName)]); // @"Reminder"
+            // if ([[reminder class] respondsToSelector:@selector(actionStringsPluralDisplayName)]) _print(stdout, @"%@actionStringsPluralDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsPluralDisplayName)]); // @"Reminders"
+            // if ([reminder respondsToSelector:@selector(actionStringsDisplayTitle)]) _print(stdout, @"%@actionStringsDisplayTitle: %@\n", indent, [reminder performSelector:@selector(actionStringsDisplayTitle)]); // seems to be the same as reminder.title
+            // _print(stdout, @"%@isFrozen: %@\n", indent, ![reminder respondsToSelector:@selector(isFrozen)] ? @"<unimplemented>" : [reminder errorMessageWhenBOOLFromPerformingSelector:@selector(isFrozen)] ? [reminder errorMessageWhenBOOLFromPerformingSelector:@selector(isFrozen)] : @([reminder BOOLFromPerformingSelector:@selector(isFrozen)])); // NO
+            // _print(stdout, @"%@meltedClass: %@\n", indent, ![[reminder class] respondsToSelector:@selector(meltedClass)] ? @"<unimplemented>" : [[reminder class] returnErrorMessageOrPerformSelector:@selector(meltedClass)]); //
+            // _print(stdout, @"%@frozenClass: %@\n", indent, ![[reminder class] respondsToSelector:@selector(frozenClass)] ? @"<unimplemented>" : [[reminder class] returnErrorMessageOrPerformSelector:@selector(frozenClass)]); //
         }
     }
 
