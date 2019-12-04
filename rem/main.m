@@ -30,7 +30,7 @@
  */
 
 #define NSLog(format, ...) NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__)
-
+#define N NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__);
 // #define debug3(format, ...) fprintf (stderr, format, ## __VA_ARGS__)
 
 
@@ -126,7 +126,7 @@ static void _usage()
     _print(stdout, @"Usage:\n");
     _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ rm <list> <item> [<item2> ...]\n\t\tRemove reminder(s) from list\n",MYNAME);
-    _print(stdout, @"\t%@ add [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] ...\n\t%@     [--note <note>] [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,useAdvanced?[NSString stringWithFormat:@" ... \n\t%@     [--advanced] ... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--ALARM  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES,SPACES]:@"");
+    _print(stdout, @"\t%@ add [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] ...\n\t%@     [(--arriving | --leaving) (<address> | <latitude,longitude>)] ...\n\t%@     [--note <note>] [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,SPACES,useAdvanced?[NSString stringWithFormat:@" ... \n\t%@     [--advanced] ... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--ALARM  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES,SPACES]:@"");
     _print(stdout, @"\t%@ cat <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n",MYNAME);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
@@ -673,7 +673,7 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
         // NSLog(@"firstmatch: %@",firstMatch);
         // NSLog(@"range of match: [%@,%@)",@(firstMatch.range.location),@(firstMatch.range.length));
 
-        if (nMatches == 0 || [firstMatch resultType]!=NSTextCheckingTypeDate) {
+        if (nMatches == 0 || !firstMatch || [firstMatch resultType]!=NSTextCheckingTypeDate) {
             _print(stderr, @"%@: unable to parse a %@date from \"%@\"\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str);
             return EXIT_INVARG_BADDATE;
         }
@@ -697,6 +697,126 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
     return EXIT_NORMAL;
 }
 
+
+int radiusFromLocationString(double *radiusRef, NSString **locationStringRef) {
+    NSError *error = nil;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\s*(\\d+(?:\\.\\d*)?|\\.\\d+)\\s*(m|meter|meters|ft|feet|'|mi|miles|)\\s*(?:of|from|within|away\\s*from)?\\s*" options:NSRegularExpressionCaseInsensitive error:&error];
+    // NSLog(@"loc 1");
+    if (regex==nil || error) {
+        _print(stderr, @"%@: illegal radius regular expression (this should not happen): #%@ %@\n", MYNAME, error ? @(error.code) : @"?", error ? localizedUnderlyingError(error) : @"unknown reason");
+        NSLog(@"error = %@",error);
+        return EXIT_INVARG_BADLOCATION;
+    }
+    // NSLog(@"loc 2, regex = %@",regex);
+    NSTextCheckingResult *match = [regex firstMatchInString:*locationStringRef options:0 range:NSMakeRange(0, [*locationStringRef length])];
+    // NSLog(@"loc 3, match = %@",match);
+    if (match && match.numberOfRanges==3) {
+        NSRange radiusRange = [match rangeAtIndex:1];
+        NSRange unitsRange = [match rangeAtIndex:2];
+        // NSLog(@"loc 4, match = %@",match);
+        if (radiusRange.location != NSNotFound) {
+            *radiusRef = [[*locationStringRef substringWithRange:radiusRange] doubleValue];
+            // NSLog(@"found radius: %@ -> %@",[*locationStringRef substringWithRange:match.range],@(*radiusRef));
+            if (unitsRange.location != NSNotFound) {
+                NSString *units = [[*locationStringRef substringWithRange:unitsRange] localizedLowercaseString];
+                // NSLog(@"found units: %@",units);
+                if ([units isEqualToString:@"ft"] || [units isEqualToString:@"feet"] || [units isEqualToString:@"'"]) {
+                    *radiusRef *= 12.0*0.0254;
+                } else if ([units isEqualToString:@"miles"] || [units isEqualToString:@"mi"]) {
+                    *radiusRef *= 5280.0 * 12.0*0.0254;
+                } else if ([units isEqualToString:@"m"] || [units isEqualToString:@"meters"]) {
+                    *radiusRef *= 1.0;
+                } else {
+                    _print(stderr, @"%@: unknown radius units (%@)\n", MYNAME, units);
+                    NSLog(@"error = %@",error);
+                    return EXIT_INVARG_BADLOCATION;
+                }
+            }
+        }
+        *locationStringRef = [*locationStringRef stringByReplacingCharactersInRange:match.range withString:@""];
+        return EXIT_NORMAL;
+    }
+    // NSLog(@"did not find radius: %@",*locationStringRef);
+    return EXIT_NORMAL;
+}
+int latLongFromLocationString(double *latitudeRef, double *longitudeRef, NSString *locationString, NSString **locationTitleStringRef) {
+    NSError *error;
+    NSRegularExpression *latLongRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s*([+-]?\\d+(?:\\.\\d*)?|[+-]?\\.\\d+)\\s*(?:º|deg|degrees)?\\s*,\\s*([+-]?\\d+(?:\\.\\d*)?|[+-]?\\.\\d+)\\s*(?:º|deg|degrees)?\\s*" options:NSRegularExpressionCaseInsensitive error:&error];
+    if (latLongRegex==nil || error) {
+        _print(stderr, @"%@: illegal latitude/longitude regular expression (this should not happen): #%@ %@\n", MYNAME, error ? @(error.code) : @"?", error ? localizedUnderlyingError(error) : @"unknown reason");
+        NSLog(@"error = %@",error);
+        return EXIT_INVARG_BADLOCATION;
+    }
+    NSTextCheckingResult *match = [latLongRegex firstMatchInString:locationString options:0 range:NSMakeRange(0, [locationString length])];
+    if (match && match.numberOfRanges==3) {
+        NSRange latitudeRange = [match rangeAtIndex:1];
+        NSRange longitudeRange = [match rangeAtIndex:2];
+        if (latitudeRange.location != NSNotFound && longitudeRange.location != NSNotFound) {
+            *latitudeRef = [[locationString substringWithRange:latitudeRange] doubleValue];
+            *longitudeRef = [[locationString substringWithRange:longitudeRange] doubleValue];
+            *locationTitleStringRef = [NSString stringWithString:locationString];
+            if (match.range.location!=0 || match.range.length<locationString.length) {
+                NSString *extraStr = [[locationString stringByReplacingCharactersInRange:match.range withString:@" "] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                if (extraStr.length)
+                    *locationTitleStringRef = extraStr;
+            }
+            return EXIT_NORMAL;
+        }
+    }
+    return EXIT_CLEAN;
+}
+
+NSString *addressStringFromString(NSString *str) {
+    NSError *error;
+    NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeAddress error:&error];
+    if (detector == nil) {
+        _print(stderr, @"%@: unable to (allocate a DataDetector to) parse an address from \"%@\": #%@ %@\n", MYNAME, str, error ? @(error.code) : @"?", error ? localizedUnderlyingError(error) : @"unknown reason");
+        return nil;
+    }
+    NSUInteger nMatches = [detector numberOfMatchesInString:str options:0 range:NSMakeRange(0, [str length])];
+    NSTextCheckingResult *firstMatch =  [detector firstMatchInString:str options:0 range:NSMakeRange(0, [str length])];
+    if (nMatches == 0 || !firstMatch || [firstMatch resultType]!=NSTextCheckingTypeAddress) {
+        _print(stderr, @"%@: unable to parse a an address from \"%@\"\n", MYNAME, str);
+        return nil;
+    }
+    return [str substringWithRange:firstMatch.range];
+}
+
+CLLocation *getCoordinate( NSString *addressString,
+        NSError ** _Nonnull errorRef ) {
+    CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+    __block BOOL completed = NO;
+    __block NSError * _Nullable theError = nil;
+    __block CLLocation * _Nullable ans = nil;
+    [geocoder geocodeAddressString:addressString inRegion:nil completionHandler:^(NSArray<CLPlacemark*> *placemarks, NSError *error) {
+            if (error)
+                theError = error;
+            else if (placemarks && placemarks.count==1)
+                ans = placemarks[0].location;
+            else if (placemarks && placemarks.count>1) {
+                NSString *listOfPlaces = @"<unimplemented>"; // TO DO
+                _print(stderr, @"%@: found multiple matching addresses in \"%@\":%@\n", MYNAME, addressString, listOfPlaces);
+            } else {
+                _print(stderr, @"%@: found no matching addresses in \"%@\"\n", MYNAME, addressString);
+            }
+        completed = YES;
+        }];
+    NSTimeInterval timeout = 30.0;
+    for (int i=0; !completed; i++) {
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+        if (timeout/0.1 <= i) {
+            [geocoder cancelGeocode];
+            break;
+        }
+    }
+    *errorRef = completed ? theError : [NSError errorWithDomain:MY_ERROR_DOMAIN code:EXIT_GEOCODE_TIMEDOUT userInfo:@{
+        NSLocalizedDescriptionKey: NSLocalizedString(@"Timed out waiting for geocode translating an address string to latitude/longitude.", nil),
+        NSLocalizedFailureReasonErrorKey: NSLocalizedString(@"Timed out", nil),
+        NSLocalizedRecoverySuggestionErrorKey: NSLocalizedString(@"unknown how to solve this", nil)
+    }];
+    return ans;
+}
+
 /*!
     @function addReminder
     @abstract add a reminder
@@ -708,7 +828,8 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
 static int addReminder(NSMutableArray<NSString*> *itemArgs)
 {
     // parse command line arguments for dueDate, note, priority
-    NSString *noteString;
+    NSString *noteString, *locationString;
+    EKAlarmProximity locationProximity;
     NSDate *alarmDate, *dueDate, *startDate;
     BOOL useAlarmOffset = NO;
     NSTimeInterval alarmOffset;
@@ -750,6 +871,12 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
                 _print(stderr, @"%@: fatal error: unknown addReminder switch \"-%@\".\n", MYNAME,swtch);
                 return EXIT_FATAL;
             }
+        } else if ([swtch isEqualToString:@"arriving"]) {
+            locationProximity = EKAlarmProximityEnter;
+            locationString = [itemArgs shift];
+        } else if ([swtch isEqualToString:@"leaving"] || [swtch isEqualToString:@"departing"]) {
+            locationProximity = EKAlarmProximityLeave;
+            locationString = [itemArgs shift];
         } else if ([swtch isEqualToString:@"note"]) {
             noteString = [itemArgs shift];
             // NSLog(@"set note to: %@", noteString);
@@ -790,6 +917,9 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     reminder.title = reminderTitle;
     reminder.priority = priority;
     if (noteString) reminder.notes=noteString;
+    
+    // alarms
+    EKAlarm *alarm = nil;
     if (alarmDate==nil && useAlarmOffset && normal_due) {
         alarmDate = [NSDate dateWithTimeIntervalSinceNow:alarmOffset];
         useAlarmOffset = NO;
@@ -822,20 +952,66 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
             NSLog(@"loc 12");
         }
         */
-        [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:alarmDate]];
+        alarm = [EKAlarm alarmWithAbsoluteDate:alarmDate];
         // NSLog(@"loc 13, reminder = %@", reminder);
         // NSLog(@"loc 13, reminder.alarms.count = %@", @(reminder.alarms.count));
         // NSLog(@"loc 13, reminder.alarms[0] = %@", reminder.alarms[0]);
         // NSLog(@"loc 13, reminder.alarms[0].absoluteDate = %@", reminder.alarms[0].absoluteDate);
     } else if (useAlarmOffset) {
         // if (normal_due) {not needed because handled above} else {
-        [reminder addAlarm:[EKAlarm alarmWithRelativeOffset:alarmOffset]];
+        alarm = [EKAlarm alarmWithRelativeOffset:alarmOffset];
         if (dueDate == nil) {
             // offset is relative to dueDate so set the dueDate to now if not set
             dueDate = [NSDate date];
         }
         // } // if (normal_due)
     }
+    if (locationString) {
+        int res;
+        double radius = 200.0; // default
+        res = radiusFromLocationString(&radius,&locationString);
+        if (res) return res;
+        // NSLog(@"location string after extracting radius = \"%@\"",locationString);
+        EKStructuredLocation *loc;
+        double latitude, longitude;
+        NSString *locationTitleString;
+        res = latLongFromLocationString(&latitude,&longitude,locationString,&locationTitleString);
+        if (res == EXIT_NORMAL) { // found lat/long
+            CLLocation *latLong = [[CLLocation alloc] initWithLatitude:latitude longitude:longitude];
+            loc = [EKStructuredLocation locationWithTitle:locationTitleString?locationTitleString:locationString];
+            loc.geoLocation = latLong;
+            loc.radius = radius;
+        } else if (res == EXIT_CLEAN) { // did not find lat/long so look for address
+            NSString *addressString = addressStringFromString(locationString);
+            if (addressString) {
+                NSError *error;
+                CLLocation *latLong = getCoordinate( addressString, &error);
+                if (latLong && !error) {
+                    loc = [EKStructuredLocation locationWithTitle:addressString];
+                    loc.geoLocation = latLong;
+                    loc.radius = radius;
+                } else {
+                    _print(stderr, @"%@: unable to convert address \"%@\" to latitude/longitude: #%@ %@\n", MYNAME, addressString, error ? @(error.code) : @"?", error ? localizedUnderlyingError(error) : @"unknown reason");
+                    return EXIT_INVARG_BADLOCATION;
+                }
+            } else {
+                // already printed error in addressStringFromString()
+            }
+        } else // some error code
+            return res;
+        if (loc) {
+            if (alarm == nil) {
+                alarm = [[EKAlarm alloc] init];
+                alarm.proximity = locationProximity;
+                alarm.soundName = @"Basso"; alarm.soundName = nil; // do not know why this is necessary but adding the reminder without it gives "action is required" error
+            }
+            alarm.structuredLocation = loc;
+        }
+        // NSLog(@"alarm = %@",alarm);
+    }
+    if (alarm)
+        [reminder addAlarm:alarm];
+    
     // NSLog(@"loc 14");
     if (dueDate) {
         reminder.dueDateComponents = [[NSCalendar currentCalendar] components:(NSCalendarUnit)NSUIntegerMax fromDate:dueDate];
