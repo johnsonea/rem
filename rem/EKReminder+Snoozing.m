@@ -10,12 +10,19 @@
 
 @implementation EKReminder (Snoozing)
 
-- (BOOL)snoozing { // need different name from isSnoozed
+- (BOOL)isSnoozed {
     if (self.hasAlarms && self.alarms) {
-        for (NSUInteger i=0; i<self.alarms.count; i++) {
-            if ([self.alarms[i] snoozing])
+        for (EKAlarm *alarm in self.alarms)
+            if ([alarm snoozing])
                 return YES;
-        }
+    }
+    return NO;
+}
+- (BOOL)hasUnsnoozedPastAlarms {
+    if (self.hasAlarms && self.alarms) {
+        for (EKAlarm *alarm in self.alarms)
+            if ([alarm isUnsnoozedAndInPastForReminder:self])
+                return YES;
     }
     return NO;
 }

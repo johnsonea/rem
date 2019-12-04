@@ -29,6 +29,11 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (BOOL)noSnooze;
 - (BOOL)snoozing;
 - (void)setSnoozing:(BOOL)newSnoozed;
+
+- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder;
+- (BOOL)isUnsnoozedAndInPast;
+- (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder;
+
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
 

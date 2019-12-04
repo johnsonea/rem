@@ -6,6 +6,7 @@
 //  Copyright © 2019 Erik A Johnson. All rights reserved.
 //
 
+#include <math.h>
 #import "EKAlarm+stringWith+MutableAlarm.h"
 #import "NSObject+performSelectorSafely.h"
 #import "main.h"
@@ -54,6 +55,21 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     ((EKMutableAlarm*)self).isSnoozed = newSnoozed;
 }
 
+- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder {
+    NSDate *alarmDate = self.absoluteDate ? self.absoluteDate : reminder && reminder.dueDateComponents ? [NSDate dateWithTimeInterval:self.relativeOffset sinceDate:[[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]] : nil;
+    return alarmDate==nil ? NAN : [alarmDate timeIntervalSinceNow];
+}
+- (BOOL)isUnsnoozedAndInPast {
+    return [self isUnsnoozedAndInPastForReminder:nil];
+}
+- (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder {
+    if ([self hasSnooze] && [(EKMutableAlarm*)self isSnoozed]) return NO;
+    NSTimeInterval secsInFuture = [self timeIntervalSinceNowForReminder:reminder];
+    if isnan(secsInFuture) // cannot determine
+        return NO;
+    return (secsInFuture < 0.0);
+}
+
 - (BOOL)hasDefault {
     return [self respondsToSelector:@selector(isDefault)];
 }
@@ -98,7 +114,7 @@ static BOOL showWarning = YES;
     if ([self respondsWithoutExceptionToSelector:@selector(owner)]) ans = [NSString stringWithFormat:@"%@ owner=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(owner)]];
     if ([self respondsWithoutExceptionToSelector:@selector(externalID)]) ans = [NSString stringWithFormat:@"%@ externalID=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(externalID)]];
     if ([self respondsWithoutExceptionToSelector:@selector(UUID)]) ans = [NSString stringWithFormat:@"%@ UUID=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(UUID)]];
-    if ([self respondsToSelector:@selector(compare:)]) {
+    if (0 && [self respondsToSelector:@selector(compare:)]) {
         id s, t, u;
         @try {
             s = @([self longlongFromPerformingSelector:@selector(compare:) withObject:self]);

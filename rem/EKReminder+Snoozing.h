@@ -13,7 +13,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface EKReminder (Snoozing)
 
-- (BOOL)snoozing;
+- (BOOL)isSnoozed;
+- (BOOL)hasUnsnoozedPastAlarms;
 
 @end
 
