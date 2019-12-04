@@ -457,23 +457,23 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         _print(stdout, @"Reminder: %@\n", reminder.title);
     _print(stdout, @"%@List: %@\n", indent, reminder.calendar.title);
 
-    _print(stdout, @"%@Created  On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.creationDate]);
+    _print(stdout, @"%@Created:  %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.creationDate]);
 
     if (reminder.lastModifiedDate != reminder.creationDate) {
-        _print(stdout, @"%@Modified On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.lastModifiedDate]);
+        _print(stdout, @"%@Modified: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.lastModifiedDate]);
     }
 
     if (reminder.startDateComponents) {
         NSDate *startDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.startDateComponents]; // this does not work: [reminder.startDateComponents date];
         if (startDate) {
-            _print(stdout, @"%@Started  On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:startDate]);
+            _print(stdout, @"%@Started:  %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:startDate]);
         }
     }
 
     if (reminder.dueDateComponents) {
         NSDate *dueDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]; // this does not work: [reminder.dueDateComponents date];
         if (dueDate) {
-            _print(stdout, @"%@Due      On: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:dueDate]);
+            _print(stdout, @"%@Due:      %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:dueDate]);
         }
     }
 
