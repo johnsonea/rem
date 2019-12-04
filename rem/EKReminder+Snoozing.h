@@ -14,7 +14,14 @@ NS_ASSUME_NONNULL_BEGIN
 @interface EKReminder (Snoozing)
 
 - (BOOL)isSnoozed;
+- (EKAlarm* _Nullable)firstSnoozedAlarm;
+- (NSArray<EKAlarm*>* _Nonnull)snoozedPastAlarms;
+
 - (BOOL)hasUnsnoozedPastAlarms;
+- (EKAlarm* _Nullable)firstUnsnoozedPastAlarm;
+- (NSArray<EKAlarm*>* _Nonnull)unsnoozedPastAlarms;
+
+
 
 @end
 
