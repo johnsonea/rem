@@ -20,28 +20,6 @@
 
 @implementation EKAlarm (stringWith)
 
-NSString *structuredLocationString(EKStructuredLocation *loc) {
-    return loc.description ? loc.description : [NSString stringWithFormat:@"%@",loc];
-}
-
-// note: cannot call this proximityString because self.proximity calls proximityString and this would run into an infinite recursion
-- (NSString *)proximityStr {
-    return
-    self.proximity == EKAlarmProximityNone ? @"" :
-    self.proximity == EKAlarmProximityEnter ? [NSString stringWithFormat:@" arriving=%@",structuredLocationString(self.structuredLocation)] :
-    self.proximity == EKAlarmProximityLeave ? [NSString stringWithFormat:@" leaving=%@",structuredLocationString(self.structuredLocation)] :
-    [NSString stringWithFormat:@" %@", @(self.proximity)];
-}
-
-- (NSString *)typeString {
-    return !self ? @"<none>" :
-    self.type==EKAlarmTypeAudio ? [NSString stringWithFormat:@"sound:%@",(self.emailAddress?self.emailAddress:@"?")] :
-    self.type==EKAlarmTypeDisplay ? @"display" :
-    self.type==EKAlarmTypeEmail ? [NSString stringWithFormat:@"mailto:%@",(self.emailAddress?self.emailAddress:@"?")] :
-    self.type==EKAlarmTypeProcedure ? @"procedure" :
-    [NSString stringWithFormat:@"%@",@(self.type)];
-}
-
 - (BOOL)hasSnooze {
     return [self respondsToSelector:@selector(isSnoozed)];
 }
@@ -98,6 +76,29 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     exit(254);
     // ((EKMutableAlarm*)self).sharedUID = newSharedUID;
 }
+
+NSString *structuredLocationString(EKStructuredLocation *loc) {
+    return loc.description ? loc.description : [NSString stringWithFormat:@"%@",loc];
+}
+
+// note: cannot call this proximityString because self.proximity calls proximityString and this would run into an infinite recursion
+- (NSString *)proximityStr {
+    return
+    self.proximity == EKAlarmProximityNone ? @"" :
+    self.proximity == EKAlarmProximityEnter ? [NSString stringWithFormat:@" arriving=%@",structuredLocationString(self.structuredLocation)] :
+    self.proximity == EKAlarmProximityLeave ? [NSString stringWithFormat:@" leaving=%@",structuredLocationString(self.structuredLocation)] :
+    [NSString stringWithFormat:@" %@", @(self.proximity)];
+}
+
+- (NSString *)typeString {
+    return !self ? @"<none>" :
+    self.type==EKAlarmTypeAudio ? [NSString stringWithFormat:@"sound:%@",(self.emailAddress?self.emailAddress:@"?")] :
+    self.type==EKAlarmTypeDisplay ? @"display" :
+    self.type==EKAlarmTypeEmail ? [NSString stringWithFormat:@"mailto:%@",(self.emailAddress?self.emailAddress:@"?")] :
+    self.type==EKAlarmTypeProcedure ? @"procedure" :
+    [NSString stringWithFormat:@"%@",@(self.type)];
+}
+
 
 static BOOL showWarning = YES;
 - (NSString*)undocumentedProperties {

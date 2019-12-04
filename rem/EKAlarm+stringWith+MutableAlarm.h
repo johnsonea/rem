@@ -22,9 +22,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface EKAlarm (stringWith)
 
-NSString *structuredLocationString(EKStructuredLocation *loc);
-- (NSString *)proximityStr;
-- (NSString *)typeString;
 - (BOOL)hasSnooze;
 - (BOOL)noSnooze;
 - (BOOL)snoozing;
@@ -34,6 +31,9 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (BOOL)isUnsnoozedAndInPast;
 - (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder;
 
+NSString *structuredLocationString(EKStructuredLocation *loc);
+- (NSString *)proximityStr;
+- (NSString *)typeString;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
 
