@@ -18,6 +18,8 @@
 #import "EKReminder+Snoozing.h"
 #import "NSMutableArray+Queue.h"
 #import <CoreLocation/CoreLocation.h>
+#import "NSString+regex.h"
+
 
 /*
  TO DO:
@@ -572,61 +574,32 @@ int scanDoubleAlone(NSString *str, double *ref) {
     return (![scanner scanDouble:ref] ? 0 : scanner.atEnd ? 1 : 2);
 }
 int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
-    NSRange r;
-    NSError *error = NULL;
     if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS: substr=%@",substr);
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*(?:(\\d+(?:\\.\\d*)?)\\s*d)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*h)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*m)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*s?)?\\s*$" options:NSRegularExpressionCaseInsensitive error:&error];
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 1, regex = %@",regex);
-    if (error != nil) {
-        _print(stderr, @"%@: illegal DHMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), localizedUnderlyingError(error));
+    NSDictionary<NSNumber*,NSString*> *groups;
+    @try { groups = [substr substringsFirstMatchingRegexStringI:@"^\\s*(?:(\\d+(?:\\.\\d*)?)\\s*d)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*h)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*m)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*s?)?\\s*$"]; } @catch (NSException *exception) {
+        _print(stderr, @"%@: illegal DHMS regular expression (this should not happen): %@%@\n", MYNAME, exception.reason,exception.userInfo?[NSString stringWithFormat:@" (userInfo=%@)",exception.userInfo]:@"");
         return EXIT_FATAL;
     }
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 2");
-    NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
-    if (match == nil)
-        return EXIT_CLEAN;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 3, match = %@",match);
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 5, match.numberOfRanges = %@",@(match.numberOfRanges));
-    *secsRef = 0.0;
-    r=[match rangeAtIndex:1]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*86400.0;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
-    r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*3600.0;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
-    r=[match rangeAtIndex:3]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue]*60.0;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
-    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS 99, secs = %@",@(*secsRef));
+    if (!groups) return EXIT_CLEAN; // did not match
+    *secsRef = [[groups objectForKey:@1] doubleValue]*86400.0
+             + [[groups objectForKey:@2] doubleValue]*3600.0
+             + [[groups objectForKey:@3] doubleValue]*60.0
+             + [[groups objectForKey:@4] doubleValue]; // NOTE: nil's -> 0.0
+    if (DEBUG>1) NSLog(@"secs=%@",@(*secsRef));
     return EXIT_NORMAL;
 }
 int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
-    NSRange r;
-    NSError *error = NULL;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\s*(?:(?:(?:(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(?:\\.\\d*)?)$" options:NSRegularExpressionCaseInsensitive error:&error];
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 1, regex = %@",regex);
-    if (error != nil) {
-        _print(stderr, @"%@: illegal HMS regular expression (this should not happen): #%@ %@\n", MYNAME, @(error.code), localizedUnderlyingError(error));
-        return EXIT_FATAL;
-    }
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 2");
-    // location==NSNotFound ==> range is blank
-    NSTextCheckingResult *match = [regex firstMatchInString:substr options:0 range:NSMakeRange(0, [substr length])];
-    if (match == nil)
-        return EXIT_CLEAN;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 3, match = %@",match);
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 4, match.range = [%@,%@]",@(match.range.location),@(match.range.length));
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 5, match.numberOfRanges = %@",@(match.numberOfRanges));
-    *secsRef = 0.0;
-    r=[match rangeAtIndex:1]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*86400.0;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 6, match.range[1] = [%@,%@]",@(r.location),@(r.length));
-    r=[match rangeAtIndex:2]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*3600.0;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 7, match.range[2] = [%@,%@]",@(r.location),@(r.length));
-    r=[match rangeAtIndex:3]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] integerValue]*60.0;
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 8, match.range[3] = [%@,%@]",@(r.location),@(r.length));
-    r=[match rangeAtIndex:4]; if (r.location!=NSNotFound) *secsRef+=[[substr substringWithRange:r] doubleValue];
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 9, match.range[4] = [%@,%@]",@(r.location),@(r.length));
-    if (DEBUG>1) NSLog(@"parseTimeSeparatedByColons 99, secs = %@",@(*secsRef));
+    NSDictionary<NSNumber*,NSString*> *groups;
+    @try { groups = [substr substringsFirstMatchingRegexStringI:@"^\\s*(?:(?:(?:(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(?:\\.\\d*)?)$"]; } @catch (NSException *exception) {
+       _print(stderr, @"%@: illegal D:H:M:S regular expression (this should not happen): %@%@\n", MYNAME, exception.reason,exception.userInfo?[NSString stringWithFormat:@" (userInfo=%@)",exception.userInfo]:@"");
+       return EXIT_FATAL;
+   }
+    if (!groups) return EXIT_CLEAN; // did not match
+    *secsRef = [[groups objectForKey:@1] doubleValue]*86400.0
+             + [[groups objectForKey:@2] doubleValue]*3600.0
+             + [[groups objectForKey:@3] doubleValue]*60.0
+             + [[groups objectForKey:@4] doubleValue]; // NOTE: nil's -> 0.0
+    if (DEBUG>1) NSLog(@"secs=%@",@(*secsRef));
     return EXIT_NORMAL;
 }
 
@@ -699,71 +672,44 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
 
 
 int radiusFromLocationString(double *radiusRef, NSString **locationStringRef) {
-    NSError *error = nil;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\s*(\\d+(?:\\.\\d*)?|\\.\\d+)\\s*(m|meter|meters|ft|feet|'|mi|miles|)\\s*(?:of|from|within|away\\s*from)?\\s*" options:NSRegularExpressionCaseInsensitive error:&error];
-    // NSLog(@"loc 1");
-    if (regex==nil || error) {
-        _print(stderr, @"%@: illegal radius regular expression (this should not happen): #%@ %@\n", MYNAME, error ? @(error.code) : @"?", error ? localizedUnderlyingError(error) : @"unknown reason");
-        NSLog(@"error = %@",error);
+    NSDictionary<NSNumber*,NSString*> *groups;
+    NSString *remainder;
+    @try { groups = [*locationStringRef substringsFirstMatchingRegexStringI:@"\\s*(\\d+(?:\\.\\d*)?|\\.\\d+)\\s*(m|meter|meters|ft|feet|'|mi|miles|)\\s*(?:of|from|within|away\\s*from)?\\s*" leavingString:&remainder]; } @catch (NSException *exception) {
+        _print(stderr, @"%@: illegal radius regular expression (this should not happen): %@%@\n", MYNAME, exception.reason,exception.userInfo?[NSString stringWithFormat:@" (userInfo=%@)",exception.userInfo]:@"");
         return EXIT_INVARG_BADLOCATION;
     }
-    // NSLog(@"loc 2, regex = %@",regex);
-    NSTextCheckingResult *match = [regex firstMatchInString:*locationStringRef options:0 range:NSMakeRange(0, [*locationStringRef length])];
-    // NSLog(@"loc 3, match = %@",match);
-    if (match && match.numberOfRanges==3) {
-        NSRange radiusRange = [match rangeAtIndex:1];
-        NSRange unitsRange = [match rangeAtIndex:2];
-        // NSLog(@"loc 4, match = %@",match);
-        if (radiusRange.location != NSNotFound) {
-            *radiusRef = [[*locationStringRef substringWithRange:radiusRange] doubleValue];
-            // NSLog(@"found radius: %@ -> %@",[*locationStringRef substringWithRange:match.range],@(*radiusRef));
-            if (unitsRange.location != NSNotFound) {
-                NSString *units = [[*locationStringRef substringWithRange:unitsRange] localizedLowercaseString];
-                // NSLog(@"found units: %@",units);
-                if ([units isEqualToString:@"ft"] || [units isEqualToString:@"feet"] || [units isEqualToString:@"'"]) {
-                    *radiusRef *= 12.0*0.0254;
-                } else if ([units isEqualToString:@"miles"] || [units isEqualToString:@"mi"]) {
-                    *radiusRef *= 5280.0 * 12.0*0.0254;
-                } else if ([units isEqualToString:@"m"] || [units isEqualToString:@"meters"]) {
-                    *radiusRef *= 1.0;
-                } else {
-                    _print(stderr, @"%@: unknown radius units (%@)\n", MYNAME, units);
-                    NSLog(@"error = %@",error);
-                    return EXIT_INVARG_BADLOCATION;
-                }
-            }
-        }
-        *locationStringRef = [*locationStringRef stringByReplacingCharactersInRange:match.range withString:@""];
-        return EXIT_NORMAL;
+    if (!groups) return EXIT_CLEAN; // did not match
+    *radiusRef = [[groups objectForKey:@1] doubleValue]; // meters
+    // find units
+    NSString *units = [groups objectForKey:@2];
+    if ([units isEqualToString:@"ft"] || [units isEqualToString:@"feet"] || [units isEqualToString:@"'"]) {
+        *radiusRef *= 12.0*0.0254;
+    } else if ([units isEqualToString:@"miles"] || [units isEqualToString:@"mi"]) {
+        *radiusRef *= 5280.0 * 12.0*0.0254;
+    } else if (![units isEqualToString:@"m"] && ![units isEqualToString:@"meters"]) {
+        _print(stderr, @"%@: unknown radius units (%@)\n", MYNAME, units);
+        return EXIT_INVARG_BADLOCATION;
     }
-    // NSLog(@"did not find radius: %@",*locationStringRef);
+    *locationStringRef = remainder;
+    if (DEBUG>1) NSLog(@"radius=%@",@(*radiusRef));
     return EXIT_NORMAL;
 }
 int latLongFromLocationString(double *latitudeRef, double *longitudeRef, NSString *locationString, NSString **locationTitleStringRef) {
-    NSError *error;
-    NSRegularExpression *latLongRegex = [NSRegularExpression regularExpressionWithPattern:@"\\s*([+-]?\\d+(?:\\.\\d*)?|[+-]?\\.\\d+)\\s*(?:º|deg|degrees)?\\s*,\\s*([+-]?\\d+(?:\\.\\d*)?|[+-]?\\.\\d+)\\s*(?:º|deg|degrees)?\\s*" options:NSRegularExpressionCaseInsensitive error:&error];
-    if (latLongRegex==nil || error) {
-        _print(stderr, @"%@: illegal latitude/longitude regular expression (this should not happen): #%@ %@\n", MYNAME, error ? @(error.code) : @"?", error ? localizedUnderlyingError(error) : @"unknown reason");
-        NSLog(@"error = %@",error);
+    NSDictionary<NSNumber*,NSString*> *groups;
+    NSString *remainder;
+    @try { groups = [locationString substringsFirstMatchingRegexStringI:@"\\s*([+-]?\\d+(?:\\.\\d*)?|[+-]?\\.\\d+)\\s*(?:º|deg|degrees)?\\s*,\\s*([+-]?\\d+(?:\\.\\d*)?|[+-]?\\.\\d+)\\s*(?:º|deg|degrees)?\\s*" leavingString:&remainder]; } @catch (NSException *exception) {
+        _print(stderr, @"%@: illegal latitude/longitude regular expression (this should not happen): %@%@\n", MYNAME, exception.reason,exception.userInfo?[NSString stringWithFormat:@" (userInfo=%@)",exception.userInfo]:@"");
         return EXIT_INVARG_BADLOCATION;
     }
-    NSTextCheckingResult *match = [latLongRegex firstMatchInString:locationString options:0 range:NSMakeRange(0, [locationString length])];
-    if (match && match.numberOfRanges==3) {
-        NSRange latitudeRange = [match rangeAtIndex:1];
-        NSRange longitudeRange = [match rangeAtIndex:2];
-        if (latitudeRange.location != NSNotFound && longitudeRange.location != NSNotFound) {
-            *latitudeRef = [[locationString substringWithRange:latitudeRange] doubleValue];
-            *longitudeRef = [[locationString substringWithRange:longitudeRange] doubleValue];
-            *locationTitleStringRef = [NSString stringWithString:locationString];
-            if (match.range.location!=0 || match.range.length<locationString.length) {
-                NSString *extraStr = [[locationString stringByReplacingCharactersInRange:match.range withString:@" "] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-                if (extraStr.length)
-                    *locationTitleStringRef = extraStr;
-            }
-            return EXIT_NORMAL;
-        }
-    }
-    return EXIT_CLEAN;
+    // do I want to try deg/mins/secs.xxxxx ???
+    if (!groups) return EXIT_CLEAN; // did not match
+    if (*latitudeRef)  *latitudeRef  = [[groups objectForKey:@1] doubleValue];
+    if (*longitudeRef) *longitudeRef = [[groups objectForKey:@2] doubleValue];
+    *locationTitleStringRef = [NSString stringWithString:locationString];
+    remainder = [remainder stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (remainder.length)
+        *locationTitleStringRef = remainder;
+    return EXIT_NORMAL;
 }
 
 NSString *addressStringFromString(NSString *str) {
