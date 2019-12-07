@@ -20,6 +20,9 @@ NS_ASSUME_NONNULL_BEGIN
 +(void)doThrowException;
 +(void)dontThrowException;
 
++(NSString*)errorDomainNSStringRegex;
++(void)setErrorDomainNSStringRegex:(NSString*_Nonnull)str;
+
 -(NSString*_Nullable)substringFirstMatchingRegexString:(NSString*_Nonnull)regexString options:(NSRegularExpressionOptions)options returningCaptureGroups:(NSDictionary<NSNumber*,NSString*>*_Nullable*_Nullable)captureGroupsDictRef leavingString:(NSString*_Nullable*_Nullable)remainderRef error:(NSError*_Nullable*_Nullable)errorRef;
 
 -(NSString*_Nullable)substringFirstMatchingRegexString:(NSString*_Nonnull)regexString options:(NSRegularExpressionOptions)options returningCaptureGroups:(NSDictionary<NSNumber*,NSString*>*_Nullable*_Nullable)captureGroupsDictRef leavingString:(NSString*_Nullable*_Nullable)remainderRef;

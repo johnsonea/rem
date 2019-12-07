@@ -1157,7 +1157,8 @@ int main(int argc, const char * argv[]) {
     int exitStatus = 0;
 
     @autoreleasepool {
-        
+        [NSString setErrorDomainNSStringRegex:MY_ERROR_DOMAIN];
+
         useAdvanced = [@"johnsone" isEqualToString:NSUserName()];
         
         NSMutableArray *itemArgs;

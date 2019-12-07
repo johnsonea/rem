@@ -8,9 +8,6 @@
 
 #import "NSString+regex.h"
 
-#ifndef ERROR_DOMAIN
-#define ERROR_DOMAIN @"edu.usc.johnsone"
-#endif
 #ifndef ERRORCODE_REGEXP_BADMATCH
 #define ERRORCODE_REGEXP_BADMATCH 123
 #endif
@@ -20,6 +17,7 @@
 
 static BOOL throwException = YES;
 static int  exitStatus = 250;
+static NSString *errorDomainNSStringRegex = @"default.NSString.regex";
 
 @implementation NSString (regex)
 +(int)exitStatus {return exitStatus;}
@@ -28,7 +26,8 @@ static int  exitStatus = 250;
 +(void)setThrowException:(BOOL)shouldThrowException { throwException=shouldThrowException; }
 +(void)doThrowException { throwException=YES; }
 +(void)dontThrowException { throwException=NO; }
-
++(NSString*)errorDomainNSStringRegex { return errorDomainNSStringRegex; }
++(void)setErrorDomainNSStringRegex:(NSString*_Nonnull)str { errorDomainNSStringRegex=str; }
 
 #define NSLog(format, ...) NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__)
 
@@ -40,7 +39,7 @@ static int  exitStatus = 250;
     if (errorRef && *errorRef) return nil;
     if (!regex) {
         // I don't know if this can happen without *errorRef being set but just in case ...
-        if (errorRef) *errorRef = [NSError errorWithDomain:ERROR_DOMAIN code:ERRORCODE_REGEXP_BADREGEX userInfo:@{
+        if (errorRef) *errorRef = [NSError errorWithDomain:errorDomainNSStringRegex code:ERRORCODE_REGEXP_BADREGEX userInfo:@{
             NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Unable to create the regular expression \"%@\"",nil), regexString],
             NSLocalizedFailureReasonErrorKey:NSLocalizedString(@"Unknown why this happened.",nil),
             NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Talk to the developer of this application.",nil),
@@ -51,7 +50,7 @@ static int  exitStatus = 250;
     if (!firstMatch) return nil;
     if (firstMatch.numberOfRanges != regex.numberOfCaptureGroups+1) {
         // I don't know if this can happen, but just in case
-        if (errorRef) *errorRef = [NSError errorWithDomain:ERROR_DOMAIN code:ERRORCODE_REGEXP_BADMATCH userInfo:@{
+        if (errorRef) *errorRef = [NSError errorWithDomain:errorDomainNSStringRegex code:ERRORCODE_REGEXP_BADMATCH userInfo:@{
             NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Matching string \"%@\" with the regular expression \"%@\" returned the wrong number of ranges (%d but should be %d). This should not normally happen.",nil), self, regexString, firstMatch.numberOfRanges, regex.numberOfCaptureGroups+1],
             NSLocalizedFailureReasonErrorKey:NSLocalizedString(@"Unknown why this happened.",nil),
             NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Talk to the developer of this application.",nil),
@@ -85,7 +84,7 @@ static int  exitStatus = 250;
     if (errorRef && *errorRef) return nil;
     if (!regex) {
         // I don't know if this can happen without *errorRef being set but just in case ...
-        if (errorRef) *errorRef = [NSError errorWithDomain:ERROR_DOMAIN code:ERRORCODE_REGEXP_BADREGEX userInfo:@{
+        if (errorRef) *errorRef = [NSError errorWithDomain:errorDomainNSStringRegex code:ERRORCODE_REGEXP_BADREGEX userInfo:@{
             NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Unable to create the regular expression \"%@\"",nil), regexString],
             NSLocalizedFailureReasonErrorKey:NSLocalizedString(@"Unknown why this happened.",nil),
             NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Talk to the developer of this application.",nil),
@@ -96,7 +95,7 @@ static int  exitStatus = 250;
     if (!firstMatch) return nil;
     if (firstMatch.numberOfRanges != regex.numberOfCaptureGroups+1) {
         // I don't know if this can happen, but just in case
-        if (errorRef) *errorRef = [NSError errorWithDomain:ERROR_DOMAIN code:ERRORCODE_REGEXP_BADMATCH userInfo:@{
+        if (errorRef) *errorRef = [NSError errorWithDomain:errorDomainNSStringRegex code:ERRORCODE_REGEXP_BADMATCH userInfo:@{
             NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Matching string \"%@\" with the regular expression \"%@\" returned the wrong number of ranges (%d but should be %d). This should not normally happen.",nil), self, regexString, firstMatch.numberOfRanges, regex.numberOfCaptureGroups+1],
             NSLocalizedFailureReasonErrorKey:NSLocalizedString(@"Unknown why this happened.",nil),
             NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Talk to the developer of this application.",nil),
