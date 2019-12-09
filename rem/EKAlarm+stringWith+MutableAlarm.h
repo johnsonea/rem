@@ -27,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)snoozing;
 - (void)setSnoozing:(BOOL)newSnoozed;
 
-- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder;
+- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder; // returns NAN if there is no identifiable date
 - (BOOL)isUnsnoozedAndInPast;
 - (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder;
 
@@ -36,6 +36,9 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (NSString *)typeString;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
+
++ (EKAlarm *)mostRecentAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
+- (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms;
 
 - (EKAlarm *)duplicateAlarm;
 - (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate;

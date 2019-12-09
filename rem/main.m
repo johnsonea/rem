@@ -42,6 +42,7 @@ NSString *PLUS_PREFIX = @"+";
 NSString *MINUS_PREFIX = @"-";
 NSString *SWITCH_SHORTDASH = @"-";
 NSString *SWITCH_LONGDASH  = @"--";
+NSInteger dupMethod=0, dupSetSharedUID=0, dupSetSnoozing=0, dupUse=0;
 
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
@@ -146,6 +147,19 @@ static int parseArguments(NSMutableArray **itemArgs)
 {
     NSMutableArray *args = *itemArgs = [NSMutableArray arrayWithArray:[[NSProcessInfo processInfo] arguments]];
     [args shift]; // pop off application argument
+    
+    // check for initial --dup... switch for testing
+    NSString *s;
+    if (0 && args.count && (s=args[0]) && [s hasPrefix:SWITCH_LONGDASH] &&
+        (s=[s substringFromIndex:[SWITCH_LONGDASH length]]) && [s hasPrefix:@"dup"]) {
+        NSDictionary<NSNumber*,NSString*> *groups = [s substringsFirstMatchingRegexStringI:@"^dup(\\d)([a-z]?)(\\d?)(\\d)$"];
+        dupMethod = [[groups objectForKey:@1] integerValue];
+        dupSetSharedUID = ((s=[groups objectForKey:@2])&&[s length]) ? ([[s substringToIndex:1] UTF8String][0]-'a'+1) : 0;
+        dupSetSnoozing = [[groups objectForKey:@3] integerValue];
+        dupUse = [[groups objectForKey:@4] integerValue];
+        NSLog(@"dup = %@.%@, %@",@(dupMethod),@(dupSetSharedUID),@(dupUse));
+        [args shift];
+    }
 
     // args array is empty, command was excuted without arguments
     if (args.count == 0) {
@@ -1074,29 +1088,149 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         _print(stderr, @"%@: Reminder #%@ \"%@\" from list % has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOALARMS;
     }
-    NSUInteger nChanged = 0;
-    NSMutableArray<EKAlarm*> *alarms = [reminder.alarms mutableCopy];
     NSTimeInterval secs = [snoozeSecondsString integerValue];
-    // NSLog(@"secs = %@",@(secs));
-    for (NSUInteger i=0; i<alarms.count; i++) {
-        if ([alarms[i] snoozing]) {
-            alarms[i] = [alarms[i] duplicateAlarmChangingTimeToNowPlusSecs:secs];
-            nChanged++;
+
+    /*
+    // TESTING
+    NSLog(@"loc 1");
+    for (EKAlarm *alarm in reminder.alarms) {
+        NSLog(@"loc 2");
+        NSLog(@"loc 2b, alarm: %@",[alarm stringWithDateFormatter:nil forReminder:reminder]);
+        NSLog(@"loc 2c");
+        if ([alarm snoozing]) {
+            NSLog(@"loc 3");
+            NSLog(@"# of alarms: %@",@(reminder.alarms.count));
+            [reminder removeAlarm:alarm];
+            NSLog(@"# of alarms: %@",@(reminder.alarms.count));
+            NSError *error;
+            BOOL success = [store saveReminder:reminder commit:YES error:&error];
+            if (!success) {
+                _print(stderr, @"%@: Error deleting alarm from Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
+                return EXIT_FAIL_SNOOZE;
+            } else {
+                _print(stderr,@"success\n");
+                return EXIT_NORMAL;
+            }
         }
     }
-    if (nChanged > 0) {
-        alarms = [alarms copy]; // make it immutable again
-        reminder.alarms = alarms;
-        // TO DO: should I be removing obsolete alarms with removeAlarm: and adding addAlarm: to add the modified ones?
+    NSLog(@"# of alarms: %@",@(reminder.alarms.count));
+    */
+    //EKAlarm *junk = [reminder.alarms[0] duplicateAlarm]; exit(1);
+    // END TESTING
+    
+    if (1) { // new version
+        NSArray<EKAlarm*> *alarmsToBeDeleted;
+        EKAlarm *alarmToSnooze;
+        if ((alarmsToBeDeleted=[reminder snoozedPastAlarms]) && alarmsToBeDeleted.count) {
+            // snooze the most recent of these alarms and delete the rest
+            alarmToSnooze = [EKAlarm mostRecentAlarmFromArray:alarmsToBeDeleted forReminder:reminder];
+        }
+        if (!alarmToSnooze && (alarmsToBeDeleted=[reminder unsnoozedPastAlarms]) && alarmsToBeDeleted.count) {
+            // snooze the most recent of these
+            // NOTE: we get here if a reminder has never been snoozed in Notification Center: the only alarm has isSnoozed=0 but has fired
+            // NOTE: I tried creating a new alarm with isSnoozed=1 and a later date and adding it to the alarm -- which is what Notification Center does -- but it always ended up _replacing_ the original isSnoozed=0 alarm
+            //   * at least, this was the case when using [reminder addAlarm:newAlarm] but maybe I should try modifying the alarms array directly?
+            alarmToSnooze = [EKAlarm mostRecentAlarmFromArray:alarmsToBeDeleted forReminder:reminder];
+        }
+        if (!alarmToSnooze) {
+            _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+            return EXIT_SNOOZE_NOTSNOOZING;
+        }
+        /*
+         ways to duplicate an alarm:
+            1 [alarmToSnooze copy]
+            2 [[alarmToSnooze class] alarmWithAlarm:alarmToSnooze] -- if [[alarmToSnooze class] respondsToSelctor:@selector(alarmWithAlarm:)]
+            3 [EKAlarm alarmWithAbsoluteDate:alarmToSnooze.absoluteDate] or  [EKAlarm alarmWithRelativeOffset:alarmToSnooze.relativeOffset]
+                3a change sharedUID (cannot!)
+                3b retain sharedUID
+            4 [EKMutableAlarm alarmWithAbsoluteDate:alarmToSnooze.absoluteDate] or [EKMutableAlarm alarmWithRelativeOffset:alarmToSnooze.relativeOffset]
+                4a change sharedUID (can!)
+                4b retain sharedUID
+            5 don't duplicate, just change the due date on alarmToSnooze
+                5b do this on just a snoozed alarm or on a non-snoozed as well?
+         testing showed that:
+            * it is not possible to result in an isSnoozed=1 alarm if the reminder did not already have one
+            * doesn't matter if I copy or use the original alarm; alarmWithAlarm works fine also except if isSnoozed=1 and I manipulate the alarms array directly; method 3 works most of the time; method 4 fails most of the time ==> so just use a normal copy
+         
+         ways to use the duplicate:
+            1 [reminder addAlarm:newAlarm];
+            2 [reminder addAlarm:newAlarm]; [reminder removeAlarm:alarmToSnooze];
+            3 reminders.alarms = [manipulate reminder.alarms directly];
+            // reminders.alarms[i] = newOrModifiedAlarm; // not allowed as alarms is not mutable
+         testing showed that:
+            * #2 (removeAlarm and addAlarm) is best; #1 can result in duplicate alarms
+        */
+        alarmsToBeDeleted = [alarmToSnooze arrayByRemovingFromArray:alarmsToBeDeleted];
+        EKAlarm *newAlarm = [alarmToSnooze duplicateAlarmChangingTimeToNowPlusSecs:secs];
+        if        (dupUse == 1) {
+            [reminder addAlarm:newAlarm];
+        } else if (dupUse == 2 || dupUse == 0) {
+            [reminder removeAlarm:alarmToSnooze];
+            [reminder addAlarm:newAlarm];
+        } else if (dupUse == 3) {
+            NSMutableArray<EKAlarm*> *newAlarms = [reminder.alarms mutableCopy];
+            BOOL notFound = YES;
+            for (NSUInteger i=0; i<newAlarms.count; i++) {
+                newAlarms[i] = newAlarm;
+                notFound = NO;
+                break;
+            }
+            if (notFound)
+                [newAlarms push:newAlarm];
+            reminder.alarms = [newAlarms copy];
+        } else {
+            NSLog(@"unknown dupUse (%@)",@(dupUse));
+            exit(1);
+        }
+        // save it
         NSError *error;
         BOOL success = [store saveReminder:reminder commit:YES error:&error];
         if (!success) {
             _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
             return EXIT_FAIL_SNOOZE;
         }
-    } else {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
-        return EXIT_SNOOZE_NOTSNOOZING;
+
+    } else { // old version
+        NSUInteger nChanged = 0;
+        NSMutableArray<EKAlarm*> *alarmsToDelete = [NSMutableArray arrayWithCapacity:reminder.alarms.count];
+        NSMutableArray<EKAlarm*> *alarmsToAdd = [NSMutableArray arrayWithCapacity:reminder.alarms.count];
+        for (EKAlarm *alarm in reminder.alarms) {
+            if ([alarm snoozing] || [alarm isUnsnoozedAndInPastForReminder:reminder]) {
+                if ([alarm snoozing])
+                    [alarmsToDelete addObject:alarm];
+                EKAlarm *newAlarm = [alarm duplicateAlarmChangingTimeToNowPlusSecs:secs];
+                NSLog(@"snoozeReminder loc 1 sharedUID = \"%@\"",((EKMutableAlarm*)newAlarm).sharedUID);
+                [newAlarm setSnoozing:YES];
+                NSLog(@"snoozeReminder loc 2 sharedUID = \"%@\"",((EKMutableAlarm*)newAlarm).sharedUID);
+                [alarmsToAdd addObject:newAlarm];
+                NSLog(@"snoozeReminder loc 3 sharedUID = \"%@\"",((EKMutableAlarm*)newAlarm).sharedUID);
+                nChanged++;
+                NSLog(@"original alarm: %@",alarm);
+                NSLog(@"original alarm: %@",[alarm stringWithDateFormatter:nil forReminder:reminder]);
+                NSLog(@"new      alarm: %@",newAlarm);
+                NSLog(@"new      alarm: %@",[newAlarm stringWithDateFormatter:nil forReminder:reminder]);
+            }
+        }
+        if (nChanged > 0) {
+            for (EKAlarm *alarmToDelete in alarmsToDelete) {
+                NSLog(@"delete alarm: %@",[alarmToDelete stringWithDateFormatter:nil forReminder:reminder]);
+                [reminder removeAlarm:alarmToDelete];
+            }
+            if (1) {
+                for (EKAlarm *alarmToAdd in alarmsToAdd) { NSLog(@"add alarm: %@",[alarmToAdd stringWithDateFormatter:nil forReminder:reminder]); [reminder addAlarm:alarmToAdd]; }
+            } else {
+                reminder.alarms = [reminder.alarms arrayByAddingObjectsFromArray:alarmsToAdd];
+            }
+            NSError *error;
+            BOOL success = [store saveReminder:reminder commit:YES error:&error];
+            if (!success) {
+                _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
+                return EXIT_FAIL_SNOOZE;
+            }
+        } else {
+            _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+            return EXIT_SNOOZE_NOTSNOOZING;
+        }
     }
     return EXIT_NORMAL;
 }
