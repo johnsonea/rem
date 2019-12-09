@@ -339,7 +339,13 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
         __block NSString *title = [reminder_id_str substringFromIndex:[REMINDER_TITLE_PREFIX length]];
         NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title == %@",title];
         predicate = [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
-            return [[(EKReminder*)object title] isEqualToString:title] && (command!=CMD_SNOOZE || [(EKReminder*)object snoozing]);
+            EKReminder *reminder = (EKReminder*)object;
+            if (! [reminder.title isEqualToString:title]) return NO;
+            if (command != CMD_SNOOZE) return YES;
+            if (reminder.isSnoozed) return YES;
+            if (!reminder.hasAlarms) return NO;
+            if ([reminder hasUnsnoozedPastAlarms]) return YES;
+            return NO;
         }];
         NSArray *filteredReminders = [reminders filteredArrayUsingPredicate:predicate];
         if (filteredReminders == nil || filteredReminders.count == 0) {
