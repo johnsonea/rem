@@ -33,7 +33,8 @@
     ((EKMutableAlarm*)self).isSnoozed = newSnoozed;
 }
 
-- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder {
+- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder // returns NAN if there is no identifiable date
+{
     NSDate *alarmDate = self.absoluteDate ? self.absoluteDate : reminder && reminder.dueDateComponents ? [NSDate dateWithTimeInterval:self.relativeOffset sinceDate:[[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]] : nil;
     return alarmDate==nil ? NAN : [alarmDate timeIntervalSinceNow];
 }
