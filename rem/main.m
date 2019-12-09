@@ -1182,6 +1182,11 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
             NSLog(@"unknown dupUse (%@)",@(dupUse));
             exit(1);
         }
+        /* could delete extraneous alarms with:
+            for (EKAlarm *alarm in alarmsToBeDeleted) [reminder removeAlarm:alarm];
+           but (a) it doesn't seem that we normally end up with any such alarms
+           and (b) such past alarms may also have a location attached, trigger other things (email, URL, etc.) so shouldn't delete them
+         */
         // save it
         NSError *error;
         BOOL success = [store saveReminder:reminder commit:YES error:&error];
