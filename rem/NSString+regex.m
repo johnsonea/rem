@@ -61,11 +61,11 @@ static NSString *errorDomainNSStringRegex = @"default.NSString.regex";
     if (captureGroupsDictRef) {
         NSMutableDictionary//<NSObject,NSString*>
         *captureGroups = [NSMutableDictionary dictionaryWithCapacity:firstMatch.numberOfRanges-1];
-        NSLog(@"firstMatch = %@",firstMatch);
-        NSLog(@"firstMatch.numberOfRanges = %@",@(firstMatch.numberOfRanges));
+        // NSLog(@"firstMatch = %@",firstMatch);
+        // NSLog(@"firstMatch.numberOfRanges = %@",@(firstMatch.numberOfRanges));
         for (NSUInteger i = 1; i < firstMatch.numberOfRanges; i++) {
             NSRange captureGroupRange = [firstMatch rangeAtIndex:i];
-            NSLog(@"loc 1, i=%@ range=(%@,%@)",@(i),@(captureGroupRange.location),@(captureGroupRange.length));
+            // NSLog(@"loc 1, i=%@ range=(%@,%@)",@(i),@(captureGroupRange.location),@(captureGroupRange.length));
             if (captureGroupRange.location != NSNotFound)
                 [captureGroups setObject:[self substringWithRange:captureGroupRange] forKey:@(i)];
         }
