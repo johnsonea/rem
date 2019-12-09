@@ -5,7 +5,7 @@
 //  Created by Kevin Y. Kim on 10/15/12.
 //  Copyright (c) 2012 kykim, inc. All rights reserved.
 //
-//  Modified by Erik A. Johnson on 10/29/2019.
+//  Modified by Erik A. Johnson during 10/29/2019 - 12/09/2019
 //
 
 #import <Foundation/Foundation.h>

@@ -2,8 +2,8 @@
 //  NSString+regex.m
 //  rem
 //
-//  Created by Erik A Johnson on 12/4/19.
-//  Copyright © 2019 kykim, inc. All rights reserved.
+//  Created by Erik A Johnson on 12/4/19 - 12/09/2019.
+//  Copyright © 2019 Erik A Johnson. All rights reserved.
 //
 
 #import "NSString+regex.h"
