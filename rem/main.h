@@ -13,5 +13,9 @@
 
 void _print(FILE *file, NSString *format, ...);
 
+#define NSLog(format, ...) NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__)
+#define N NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__);
+// #define debug3(format, ...) fprintf (stderr, format, ## __VA_ARGS__)
+
 
 #endif /* main_h */
