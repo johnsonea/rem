@@ -45,8 +45,6 @@ NS_ASSUME_NONNULL_BEGIN
 -(BOOL)matchesRegexString:(NSString*_Nonnull)regexString;
 -(BOOL)matchesRegexStringI:(NSString*_Nonnull)regexString;
 
-+(void)testNSStringRegex;
-
 @end
 
 NS_ASSUME_NONNULL_END
