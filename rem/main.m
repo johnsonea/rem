@@ -134,7 +134,7 @@ static void _usage()
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n",MYNAME);
-    _print(stdout, @"\tNote: <item> is an integer, or a dash followed by a reminder title.\n",MYNAME);
+    _print(stdout, @"\tNote: <item> is an integer, or \"%@\" followed by a reminder title.\n",MYNAME,REMINDER_TITLE_PREFIX);
 }
 
 /*!
