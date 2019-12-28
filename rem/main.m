@@ -355,7 +355,21 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             _print(stderr, @"%@: Error - there are no %@reminders titled \"%@\"%@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
             return EXIT_INVARG_BADTITLE;
         } else if (filteredReminders.count > 1) {
-            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\"%@ -- do not know which one to snooze\n", MYNAME, @(filteredReminders.count), title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
+            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\"%@ -- do not know which one to snooze:\n", MYNAME, @(filteredReminders.count), title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
+            NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+            dateFormatter.dateStyle = NSDateFormatterShortStyle;
+            dateFormatter.timeStyle = NSDateFormatterLongStyle;
+            dateFormatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+            for (EKReminder *rem in filteredReminders) {
+                NSDate *dueDate = [rem dueDateFromComponents];
+                NSDate *alarmDate = rem.hasAlarms ? [[EKAlarm mostRecentAlarmFromArray:rem.alarms forReminder:rem] alarmDateForReminder:rem] : nil;
+                if (alarmDate && dueDate && [alarmDate isEqualToDate:dueDate])
+                    alarmDate = nil;
+                NSString *dueDateString = dueDate ? [NSString stringWithFormat:@"due %@",[dateFormatter stringFromDate:dueDate]] : nil;
+                NSString *alarmDateString = alarmDate ? [NSString stringWithFormat:@"alarm %@",[dateFormatter stringFromDate:alarmDate]] : nil;
+                NSString *dateStr = (!alarmDate && !dueDate) ? @"" : !alarmDate ? [NSString stringWithFormat:@" (%@)",dueDateString] : !dueDate ? [NSString stringWithFormat:@" (%@)",alarmDateString] : [NSString stringWithFormat:@" (%@; %@)",dueDateString,alarmDateString];
+                _print(stderr,@" * %@%@\n",rem.title,dateStr);
+            }
             return EXIT_INVARG_BADTITLE;
         }
         *reminderRef = filteredReminders[0];
