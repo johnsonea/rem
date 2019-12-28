@@ -37,6 +37,7 @@
 #define SHOW_NEW_DETAILS 1
 #define RM_ASK_BEFORE 1
 
+NSString *VERSION_STRING = @"0.01eaj";
 NSString *REMINDER_TITLE_PREFIX = @"--";
 NSString *PLUS_PREFIX = @"+";
 NSString *MINUS_PREFIX = @"-";
@@ -111,7 +112,7 @@ void _print(FILE *file, NSString *format, ...)
  */
 static void _version()
 {
-    _print(stdout, @"%@ Version 0.01eaj\n",MYNAME);
+    _print(stdout, @"%@ Version %@ build %@ %@\n",MYNAME,VERSION_STRING,@(__DATE__),@(__TIME__));
 }
 
 /*!
