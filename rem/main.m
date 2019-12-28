@@ -135,7 +135,7 @@ static void _usage()
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n");
-    _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a regular expression to match to the title.\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
+    _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a title regular expression (no trailing \"/\").\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
 }
 
 /*!
