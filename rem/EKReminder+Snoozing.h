@@ -21,9 +21,17 @@ NS_ASSUME_NONNULL_BEGIN
 - (EKAlarm* _Nullable)firstUnsnoozedPastAlarm;
 - (NSArray<EKAlarm*>* _Nonnull)unsnoozedPastAlarms;
 
--(NSDate*_Nullable)dueDateFromComponents; // NOTE: MacOS has a hiden dueDate method so this one is intentionally called something different
+/* other convenience methods */
+
+// dueDateComponentsString methods
+-(NSDate*_Nullable)dueDateFromComponents; // NOTE: MacOS has an undocumented dueDate method so this one is intentionally called something different
 -(NSString*_Nullable)dueDateComponentsStringUsingDateFormatter:(NSDateFormatter*_Nonnull)dateFormatter;
 -(NSString*_Nullable)dueDateComponentsString; // use NSDateFormatter with current locale, short date style, long time style
+
+// startDateComponentsString methods
+-(NSDate*_Nullable)startDateFromComponents; // NOTE: MacOS has an undocumented startDate method so this one is intentionally called something different
+-(NSString*_Nullable)startDateComponentsStringUsingDateFormatter:(NSDateFormatter*_Nonnull)dateFormatter;
+-(NSString*_Nullable)startDateComponentsString; // use NSDateFormatter with current locale, short date style, long time style
 
 @end
 

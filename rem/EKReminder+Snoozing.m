@@ -63,7 +63,8 @@
 
 /* other convenience methods */
 
--(NSDate*_Nullable)dueDateFromComponents { // NOTE: MacOS has a hiden dueDate method so this one is intentionally called something different
+// dueDateComponentsString methods
+-(NSDate*_Nullable)dueDateFromComponents { // NOTE: MacOS has an undocumented dueDate method so this one is intentionally called something different
     // this does not work: [self.dueDateComponents date];
     return self.dueDateComponents ? [[NSCalendar currentCalendar] dateFromComponents:self.dueDateComponents] : nil;
 }
@@ -79,5 +80,26 @@
     dateFormatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
     return [self dueDateComponentsStringUsingDateFormatter:dateFormatter];
 }
+
+// startDateComponentsString methods
+-(NSDate*_Nullable)startDateFromComponents { // NOTE: MacOS has an undocumented startDate method so this one is intentionally called something different
+    return self.startDateComponents ? [[NSCalendar currentCalendar] dateFromComponents:self.startDateComponents] : nil;
+}
+-(NSString*_Nullable)startDateComponentsStringUsingDateFormatter:(NSDateFormatter*_Nonnull)dateFormatter {
+    NSDate *startDate = [self startDateFromComponents];
+    assert(dateFormatter!=nil);
+    return startDate ? [dateFormatter stringFromDate:startDate] : nil;
+}
+-(NSString*_Nullable)startDateComponentsString { // use NSDateFormatter with current locale, short date style, long time style
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    dateFormatter.dateStyle = NSDateFormatterShortStyle;
+    dateFormatter.timeStyle = NSDateFormatterLongStyle;
+    dateFormatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+    return [self startDateComponentsStringUsingDateFormatter:dateFormatter];
+}
+
+
+
+
 
 @end

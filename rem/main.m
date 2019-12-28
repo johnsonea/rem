@@ -467,16 +467,14 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         _print(stdout, @"%@Modified: %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:reminder.lastModifiedDate]);
     }
     
-    if (reminder.startDateComponents) {
-        NSDate *startDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.startDateComponents]; // this does not work: [reminder.startDateComponents date];
-        if (startDate) {
-            _print(stdout, @"%@Started:  %@\n", indent, [dateFormatterShortDateLongTime stringFromDate:startDate]);
-        }
+    NSString *startDateComponentsString = [reminder startDateComponentsStringUsingDateFormatter:dateFormatterShortDateLongTime];
+    if (startDateComponentsString) {
+        _print(stdout, @"%@Started:  %@\n", indent, startDateComponentsString);
     }
     
-    NSString *dueDateString = [reminder dueDateComponentsStringUsingDateFormatter:dateFormatterShortDateLongTime];
-    if (dueDateString) {
-        _print(stdout, @"%@Due:      %@\n", indent, dueDateString);
+    NSString *dueDateComponentsString = [reminder dueDateComponentsStringUsingDateFormatter:dateFormatterShortDateLongTime];
+    if (dueDateComponentsString) {
+        _print(stdout, @"%@Due:      %@\n", indent, dueDateComponentsString);
     }
     
     if (SHOW_NEW_DETAILS) {
