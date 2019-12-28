@@ -60,4 +60,24 @@
     return [alarms copy]; // return an immutable copy
 }
 
+
+/* other convenience methods */
+
+-(NSDate*_Nullable)dueDateFromComponents { // NOTE: MacOS has a hiden dueDate method so this one is intentionally called something different
+    // this does not work: [self.dueDateComponents date];
+    return self.dueDateComponents ? [[NSCalendar currentCalendar] dateFromComponents:self.dueDateComponents] : nil;
+}
+-(NSString*_Nullable)dueDateComponentsStringUsingDateFormatter:(NSDateFormatter*_Nonnull)dateFormatter {
+    NSDate *dueDate = [self dueDateFromComponents];
+    assert(dateFormatter!=nil);
+    return dueDate ? [dateFormatter stringFromDate:dueDate] : nil;
+}
+-(NSString*_Nullable)dueDateComponentsString { // use NSDateFormatter with current locale, short date style, long time style
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    dateFormatter.dateStyle = NSDateFormatterShortStyle;
+    dateFormatter.timeStyle = NSDateFormatterLongStyle;
+    dateFormatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+    return [self dueDateComponentsStringUsingDateFormatter:dateFormatter];
+}
+
 @end
