@@ -27,6 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)snoozing;
 - (void)setSnoozing:(BOOL)newSnoozed;
 
+- (NSDate*_Nullable)alarmDateForReminder:(EKReminder* _Nullable)reminder; // returns nil if there is no identifiable date
 - (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder; // returns NAN if there is no identifiable date
 - (BOOL)isUnsnoozedAndInPast;
 - (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder;
