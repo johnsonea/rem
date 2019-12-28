@@ -856,21 +856,16 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
             // NSLog(@"set note to: %@", noteString);
         } else if ([swtch isEqualToString:@"priority"]) {
             NSString *priorityString = [itemArgs shift];
-            if (0) {
-                priority = [priorityString integerValue];
-            } else {
-                NSInteger priorityInteger;
-                int res = scanIntegerAlone(priorityString, &priorityInteger);
-                if (res==0 || priorityInteger<0) {
-                    _print(stderr, @"%@: bad priority \"%@\" (should be an integer 0-9).\n", MYNAME, priorityString);
-                    return EXIT_INVARG_BADPRIORITY;
-                } else if (res > 1) {
-                    _print(stderr, @"%@: bad priority \"%@\" (should only be an integer 0-9).\n", MYNAME, priorityString);
-                    return EXIT_INVARG_BADPRIORITY;
-                }
-                priority = (NSUInteger) priorityInteger;
+            NSInteger priorityInteger;
+            int res = scanIntegerAlone(priorityString, &priorityInteger);
+            if (res==0 || priorityInteger<0) {
+                _print(stderr, @"%@: bad priority \"%@\" (should be an integer 0-9).\n", MYNAME, priorityString);
+                return EXIT_INVARG_BADPRIORITY;
+            } else if (res > 1) {
+                _print(stderr, @"%@: bad priority \"%@\" (should only be an integer 0-9).\n", MYNAME, priorityString);
+                return EXIT_INVARG_BADPRIORITY;
             }
-            // NSLog(@"set priority to: %@", @(priority));
+            priority = (NSUInteger) priorityInteger;
         } else {
             _print(stderr, @"%@: unknown \"add\" switch \"--%@\".\n", MYNAME, swtch);
             return EXIT_INVARG_BADSWITCH;
