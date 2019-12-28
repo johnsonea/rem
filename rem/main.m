@@ -133,8 +133,8 @@ static void _usage()
     _print(stdout, @"\t%@ snooze <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
-    _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n",MYNAME);
-    _print(stdout, @"\tNote: <item> is an integer, or \"%@\" followed by a reminder title.\n",MYNAME,REMINDER_TITLE_PREFIX);
+    _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n");
+    _print(stdout, @"\tNote: <item> is an integer, or \"%@\" followed by a reminder title.\n",REMINDER_TITLE_PREFIX);
 }
 
 /*!
