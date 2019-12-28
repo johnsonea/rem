@@ -39,6 +39,7 @@
 
 NSString *VERSION_STRING = @"0.01eaj";
 NSString *REMINDER_TITLE_PREFIX = @"--";
+NSString *REMINDER_TITLE_REGEXPREF = @"/";
 NSString *PLUS_PREFIX = @"+";
 NSString *MINUS_PREFIX = @"-";
 NSString *SWITCH_SHORTDASH = @"-";
@@ -134,7 +135,7 @@ static void _usage()
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n");
-    _print(stdout, @"\tNote: <item> is an integer, or \"%@\" followed by a reminder title.\n",REMINDER_TITLE_PREFIX);
+    _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a regular expression to match to the title.\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
 }
 
 /*!
@@ -339,11 +340,23 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             return EXIT_INVARG_EMPTYCALENDAR;
         }
         // try to find the reminder by title
-        __block NSString *title = [reminder_id_str substringFromIndex:[REMINDER_TITLE_PREFIX length]];
-        NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title == %@",title];
+        // NOTE: neither "title" nor "isRegularExpression" need __block because they will not be modified after the predicate block is created nor in the predicate block
+        NSString *title = [reminder_id_str substringFromIndex:[REMINDER_TITLE_PREFIX length]];
+        BOOL isRegularExpression = [title hasPrefix:REMINDER_TITLE_REGEXPREF];
+        __block NSError *error; // needs __block because predicate block may modify it
+        if (isRegularExpression)
+            title = [title substringFromIndex:[REMINDER_TITLE_REGEXPREF length]];
+        NSPredicate *predicate;
+        // predicate = [NSPredicate predicateWithFormat:@"title == %@",title];
         predicate = [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
             EKReminder *reminder = (EKReminder*)object;
-            if (! [reminder.title isEqualToString:title]) return NO;
+            NSError *blockError;
+            BOOL titleMatches = isRegularExpression ? [reminder.title substringFirstMatchingRegexString:title options:0 returningCaptureGroups:nil leavingString:nil error:&blockError]!=nil : [reminder.title isEqualToString:title];
+            if (isRegularExpression && blockError && !error) {
+                error = [blockError copy];
+                return NO;
+            }
+            if (! titleMatches) return NO;
             if (command != CMD_SNOOZE) return YES;
             if (reminder.isSnoozed) return YES;
             if (!reminder.hasAlarms) return NO;
@@ -351,11 +364,14 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             return NO;
         }];
         NSArray *filteredReminders = [reminders filteredArrayUsingPredicate:predicate];
-        if (filteredReminders == nil || filteredReminders.count == 0) {
-            _print(stderr, @"%@: Error - there are no %@reminders titled \"%@\"%@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
+        if (error) { // got an error in the regex search
+            _print(stderr, @"%@: error with regular expression \"%@\": #%@ %@\n", MYNAME, title, @(error.code), localizedUnderlyingError(error));
+            return EXIT_INVARG_BADTITLEREGEX;
+        } else if (filteredReminders == nil || filteredReminders.count == 0) {
+            _print(stderr, @"%@: Error - there are no %@reminders %@ \"%@\"%@\n", MYNAME, command==CMD_SNOOZE ? @"snoozing " : @"", isRegularExpression?@"with title matching regular expression":@"titled", title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
             return EXIT_INVARG_BADTITLE;
         } else if (filteredReminders.count > 1) {
-            _print(stderr, @"%@: Error - there are %@ reminders titled \"%@\"%@ -- do not know which one to snooze:\n", MYNAME, @(filteredReminders.count), title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
+            _print(stderr, @"%@: Error - there are %@ reminders %@ \"%@\"%@ -- do not know which one to use:\n", MYNAME, @(filteredReminders.count), isRegularExpression?@"with title matching regular expression":@"titled", title, calendarTitle ? [NSString stringWithFormat:@" in List %@",calendarTitle] : @"");
             NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
             dateFormatter.dateStyle = NSDateFormatterShortStyle;
             dateFormatter.timeStyle = NSDateFormatterLongStyle;
