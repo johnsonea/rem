@@ -28,9 +28,9 @@ ACTIONS
 *done* <LIST> [<ITEM> ...]:: mark reminder(s) as complete
 *every* [<LIST>]:: show details for all reminders in list (all lists if <LIST> is ommitted)
 *snooze* <LIST> <SECONDS> [<ITEM> ...]:: snooze reminder(s) by given number of seconds
-*add* [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] +
-[(--arriving | --leaving) (<address> | <latitude,longitude>)] +
-[--note <note>] [--priority <integer0-9>] +
+*add* [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>]
+[(--arriving | --leaving) (<address> | <latitude,longitude>)]
+[--note <note>] [--priority <integer0-9>]
 <remindertitle>:: add reminder to the default list
 *help*:: show usage information
 *version*:: show version information
