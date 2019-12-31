@@ -538,13 +538,13 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
             #pragma clang diagnostic ignored "-Wundeclared-selector"
             if ([reminder respondsToSelector:@selector(_sharedUID)])
                 _print(stdout, @"%@_sharedUID: %@\n", indent, [reminder performSelector:@selector(_sharedUID)]);
-            #pragma clang diagnostic pop
             // if ([[reminder class] respondsToSelector:@selector(actionStringsDisplayName)]) _print(stdout, @"%@actionStringsDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsDisplayName)]); // @"Reminder"
             // if ([[reminder class] respondsToSelector:@selector(actionStringsPluralDisplayName)]) _print(stdout, @"%@actionStringsPluralDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsPluralDisplayName)]); // @"Reminders"
             // if ([reminder respondsToSelector:@selector(actionStringsDisplayTitle)]) _print(stdout, @"%@actionStringsDisplayTitle: %@\n", indent, [reminder performSelector:@selector(actionStringsDisplayTitle)]); // seems to be the same as reminder.title
             // _print(stdout, @"%@isFrozen: %@\n", indent, ![reminder respondsToSelector:@selector(isFrozen)] ? @"<unimplemented>" : [reminder errorMessageWhenBOOLFromPerformingSelector:@selector(isFrozen)] ? [reminder errorMessageWhenBOOLFromPerformingSelector:@selector(isFrozen)] : @([reminder BOOLFromPerformingSelector:@selector(isFrozen)])); // NO
             // _print(stdout, @"%@meltedClass: %@\n", indent, ![[reminder class] respondsToSelector:@selector(meltedClass)] ? @"<unimplemented>" : [[reminder class] returnErrorMessageOrPerformSelector:@selector(meltedClass)]); //
             // _print(stdout, @"%@frozenClass: %@\n", indent, ![[reminder class] respondsToSelector:@selector(frozenClass)] ? @"<unimplemented>" : [[reminder class] returnErrorMessageOrPerformSelector:@selector(frozenClass)]); //
+            #pragma clang diagnostic pop
         }
     }
     
