@@ -8,21 +8,33 @@ rem - command-line interface to OSX Reminders event store
 
 SYNOPSIS
 --------
-*rem* ACTION <REMINDER_LIST> <REMINDER_ID|TITLE|REGEX> +
-*rem* --ACTION <REMINDER_LIST> <REMINDER_ID|TITLE|REGEX>
-// this is a comment
-////
-comment block
-////
+*rem* ACTION <REMINDER_LIST> <REMINDER_ID|--TITLE|--/REGEX> +
+*rem* --ACTION <REMINDER_LIST> <REMINDER_ID|--TITLE|--/REGEX> +
+*rem* -A <REMINDER_LIST> <REMINDER_ID|--TITLE|--/REGEX>
+NOTE: Not all actions take both subsequent arguments.
+TIP: Actions can be specified as a word or a long switch (i.e., with a leading "--"), or via a short switch (single hyphen followed by single letter).
+TIP: If <REMINDER_LIST> is an empty string ("") or an asterisk ("*"), it denotes searching all lists
+(which is possible when the reminder is specified by title or a regular expression, but invalid if the reminder is specified by integer index into the reminder list)
+TIP: <REMINDER_ID|--TITLE|--/REGEX> is an integer,
+or "--" followed by a reminder title,
+or "--/" followed by a title regular expression (no trailing "/").
+TIP: A negative <REMINDER_ID> counts backwards from the end of the list; i.e., -1 is the last reminder in a list.
 
 ACTIONS
 -------
-*ls*:: list reminders
-*rm*:: remove reminder from list
-*cat*:: show reminder detail
-*done*:: mark reminder as complete
+*ls* [<LIST>]:: list reminders (default action) (all lists if <LIST> is omitted)
+*rm* <LIST> [<ITEM> ...]:: remove reminder(s) from list
+*cat* <LIST> [<ITEM> ...]:: show details of reminder(s)
+*done* <LIST> [<ITEM> ...]:: mark reminder(s) as complete
+*every* [<LIST>]:: show details for all reminders in list (all lists if <LIST> is ommitted)
+*snooze* <LIST> <SECONDS> [<ITEM> ...]:: snooze reminder(s) by given number of seconds
+*add* [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] +
+[(--arriving | --leaving) (<address> | <latitude,longitude>)] +
+[--note <note>] [--priority <integer0-9>] +
+<remindertitle>:: add reminder to the default list
 *help*:: show usage information
 *version*:: show version information
+NOTE: *rm* and *done* will ask for confirmation (y/N) before acting
 
 BUILD
 -----
@@ -30,19 +42,20 @@ BUILD
 
 [source,bash]
 ----
-git clone https://github.com/kykim/rem.git
+git clone https://github.com/johnsonea/rem
 cd rem
 xcodebuild
 cp build/Release/rem /usr/local/bin
 ----
 
-AUTHOR
+AUTHORS
 ------
-Kevin Y. Kim
+Original code by Kevin Y. Kim. +
+Significant rewrite by Erik A. Johnson.
 
 RESOURCES
 ---------
-Github: <https://github.com/kykim/rem>
+Github: <https://github.com/johnsonea/rem>
 
 CONTRIBUTIONS
 -------------
@@ -54,7 +67,8 @@ with the Apache License v2.0.
 LICENSE
 -------
 
-Copyright (c) 2012 Kevin Y. Kim
+Copyright (c) 2019 Erik A. Johnson.
+Portions Copyright (c) 2012 Kevin Y. Kim
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
