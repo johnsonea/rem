@@ -8,7 +8,12 @@ rem - command-line interface to OSX Reminders event store
 
 SYNOPSIS
 --------
-*rem* ACTION <REMINDER_LIST> <REMINDER_ID>
+*rem* ACTION <REMINDER_LIST> <REMINDER_ID|TITLE|REGEX> +
+*rem* --ACTION <REMINDER_LIST> <REMINDER_ID|TITLE|REGEX>
+// this is a comment
+////
+comment block
+////
 
 ACTIONS
 -------
@@ -17,7 +22,7 @@ ACTIONS
 *cat*:: show reminder detail
 *done*:: mark reminder as complete
 *help*:: show usage information
-*verison*:: show version information
+*version*:: show version information
 
 BUILD
 -----
