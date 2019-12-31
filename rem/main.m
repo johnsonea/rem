@@ -136,6 +136,7 @@ static void _usage()
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n");
     _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a title regular expression (no trailing \"/\").\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
+    _print(stdout, @"\tNote: <list> may be an empty string \"\" or \"*\" to denote searching all lists\n\t      (invalid if reminder specified by integer index, valid with title/regex)\n");
 }
 
 /*!
@@ -515,7 +516,10 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         _print(stdout, @"%@Priority: %@\n", indent, @(reminder.priority));
         _print(stdout, @"%@Local ID: %@\n", indent, reminder.calendarItemIdentifier);
         if (reminder.hasRecurrenceRules && reminder.recurrenceRules) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wundeclared-selector"
             if ([reminder respondsToSelector:@selector(humanReadableRecurrenceDescription)]) _print(stdout, @"%@Recurrence Description: %@\n", indent, [reminder performSelector:@selector(humanReadableRecurrenceDescription)]);
+            #pragma clang diagnostic pop
             for (NSUInteger i=0; i<reminder.recurrenceRules.count; i++) {
                 _print(stdout, @"%@Recurrence Rule %@: %@\n", indent, @(i+1), reminder.recurrenceRules[i].description); // NOTE: .description is decent though could make it more humanly readable
             }
@@ -530,8 +534,11 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
                 NSLog(@"showing undocumented reminder properties");
                 showReminderUndocumentedPropertiesWarning = NO;
             }
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wundeclared-selector"
             if ([reminder respondsToSelector:@selector(_sharedUID)])
                 _print(stdout, @"%@_sharedUID: %@\n", indent, [reminder performSelector:@selector(_sharedUID)]);
+            #pragma clang diagnostic pop
             // if ([[reminder class] respondsToSelector:@selector(actionStringsDisplayName)]) _print(stdout, @"%@actionStringsDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsDisplayName)]); // @"Reminder"
             // if ([[reminder class] respondsToSelector:@selector(actionStringsPluralDisplayName)]) _print(stdout, @"%@actionStringsPluralDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsPluralDisplayName)]); // @"Reminders"
             // if ([reminder respondsToSelector:@selector(actionStringsDisplayTitle)]) _print(stdout, @"%@actionStringsDisplayTitle: %@\n", indent, [reminder performSelector:@selector(actionStringsDisplayTitle)]); // seems to be the same as reminder.title

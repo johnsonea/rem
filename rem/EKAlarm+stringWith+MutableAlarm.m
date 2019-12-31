@@ -135,7 +135,9 @@ static BOOL showWarning = YES;
         showWarning = NO;
     }
     NSString *ans = @"";
-    if ([self respondsWithoutExceptionToSelector:@selector(snoozedAlarms)]) ans = [NSString stringWithFormat:@"%@ snoozedAlarms=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(snoozedAlarms)]];
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wundeclared-selector"
+    if ([self  respondsWithoutExceptionToSelector:@selector(snoozedAlarms)]) ans = [NSString stringWithFormat:@"%@ snoozedAlarms=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(snoozedAlarms)]];
     if ([self respondsWithoutExceptionToSelector:@selector(originalAlarm)]) ans = [NSString stringWithFormat:@"%@ originalAlarm=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(originalAlarm)]];
     if ([self respondsWithoutExceptionToSelector:@selector(calendarItemOwner)]) ans = [NSString stringWithFormat:@"%@ calendarItemOwner=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(calendarItemOwner)]];
     if ([self respondsWithoutExceptionToSelector:@selector(calendarOwner)]) ans = [NSString stringWithFormat:@"%@ calendarOwner=%@",ans,[self returnErrorMessageOrPerformSelector:@selector(calendarOwner)]];
@@ -169,6 +171,7 @@ static BOOL showWarning = YES;
     // ans = [NSString stringWithFormat:@"%@ isFrozen=%@", ans, ![self respondsToSelector:@selector(isFrozen)] ? @"<unimplemented>" : ! [self respondsWithoutExceptionToSelector:@selector(isFrozen)] ? [self returnErrorMessageOrPerformSelector:@selector(isFrozen)] : @([self BOOLFromPerformingSelector:@selector(isFrozen)])]; // NO
     // if ([[self class] respondsToSelector:@selector(frozenClass)]) ans = [NSString stringWithFormat:@"%@ frozenClass=%@",ans,[[self class] returnErrorMessageOrPerformSelector:@selector(frozenClass)]];
     // if ([[self class] respondsToSelector:@selector(meltedClass)]) ans = [NSString stringWithFormat:@"%@ meltedClass=%@",ans,[[self class] returnErrorMessageOrPerformSelector:@selector(meltedClass)]];
+    #pragma clang diagnostic pop
     return ans;
 }
 
