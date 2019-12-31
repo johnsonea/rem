@@ -29,6 +29,7 @@ ACTIONS
 *every* [<LIST>]:: show details for all reminders in list (all lists if <LIST> is ommitted)
 *snooze* <LIST> <SECONDS> [<ITEM> ...]:: snooze reminder(s) by given number of seconds
 *add* [OPTIONS] <remindertitle>:: add reminder to the default list; OPTIONS include:
+
  [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>]
  [(--arriving | --leaving) (<address> | <latitude,longitude>)]
  [--note <note>]
