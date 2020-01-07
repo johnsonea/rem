@@ -660,7 +660,7 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
                 res = parseTimeSeparatedByColons(substr,&secs);
             if (res == EXIT_CLEAN) { // couldn't match either pattern
                 _print(stderr, @"%@: %@bad relative offset seconds \"%@\".\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
-                return EXIT_INVARG_BADPRIORITY;
+                return EXIT_INVARG_BADDURATION;
             } else if (res != EXIT_NORMAL)
                 return res;
         // }
@@ -1101,7 +1101,18 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         _print(stderr, @"%@: Reminder #%@ \"%@\" from list % has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOALARMS;
     }
-    NSTimeInterval secs = [snoozeSecondsString integerValue];
+    
+    // get the number of seconds
+    double secsDouble = 0;
+    int res = parseTimeSeparatedByDHMS(snoozeSecondsString,&secsDouble);
+    if (res == EXIT_CLEAN)
+        res = parseTimeSeparatedByColons(snoozeSecondsString,&secsDouble);
+    if (res == EXIT_CLEAN) { // couldn't match either pattern
+        _print(stderr, @"%@: %@bad snooze duration \"%@\".\n", MYNAME, snoozeSecondsString);
+        return EXIT_INVARG_BADSNOOZE;
+    } else if (res != EXIT_NORMAL)
+        return res; // error message will already have been printed
+    NSTimeInterval secs = secsDouble; // [snoozeSecondsString integerValue];
 
     NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
     EKAlarm *alarmToSnooze;
