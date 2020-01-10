@@ -139,6 +139,22 @@ static void _usage()
     _print(stdout, @"\tNote: <list> may be an empty string \"\" or \"*\" to denote searching all lists\n\t      (invalid if reminder specified by integer index, valid with title/regex)\n");
 }
 
+int initializeStoreIfNotAlreadyInitialized() {
+    if (store == nil) {
+        NSError *error;
+        // allocate the event store
+        store = [EKEventStore alloc];
+        if (store == nil) {
+            _print(stderr, @"%@: Unable to allocate the Reminders storage access.\n", MYNAME);
+            return EXIT_FAIL_ALLOC;
+        } else if ((store=[store initWithAccessToRemindersReturningError:&error]) == nil) { // init with access to Reminders
+            _print(stderr, @"%@: %@.\n", MYNAME,localizedUnderlyingError(error));
+            return (error.code ? (int) error.code : EXIT_AUTH_UNKNOWNRESPONSE );
+        }
+    }
+    return EXIT_NORMAL;
+}
+
 /*!
     @function parseArguments
     @abstract Command arguement parser
@@ -1216,21 +1232,6 @@ static int handleCommand(NSMutableArray *itemArgs)
     return EXIT_NORMAL;
 }
 
-int initializeStoreIfNotAlreadyInitialized() {
-    if (store == nil) {
-        NSError *error;
-        // allocate the event store
-        store = [EKEventStore alloc];
-        if (store == nil) {
-            _print(stderr, @"%@: Unable to allocate the Reminders storage access.\n", MYNAME);
-            return EXIT_FAIL_ALLOC;
-        } else if ((store=[store initWithAccessToRemindersReturningError:&error]) == nil) { // init with access to Reminders
-            _print(stderr, @"%@: %@.\n", MYNAME,localizedUnderlyingError(error));
-            return (error.code ? (int) error.code : EXIT_AUTH_UNKNOWNRESPONSE );
-        }
-    }
-    return EXIT_NORMAL;
-}
 int main(int argc, const char * argv[]) {
     int exitStatus = 0;
 
