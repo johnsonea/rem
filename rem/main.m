@@ -1216,6 +1216,21 @@ static int handleCommand(NSMutableArray *itemArgs)
     return EXIT_NORMAL;
 }
 
+int initializeStoreIfNotAlreadyInitialized() {
+    if (store == nil) {
+        NSError *error;
+        // allocate the event store
+        store = [EKEventStore alloc];
+        if (store == nil) {
+            _print(stderr, @"%@: Unable to allocate the Reminders storage access.\n", MYNAME);
+            return EXIT_FAIL_ALLOC;
+        } else if ((store=[store initWithAccessToRemindersReturningError:&error]) == nil) { // init with access to Reminders
+            _print(stderr, @"%@: %@.\n", MYNAME,localizedUnderlyingError(error));
+            return (error.code ? (int) error.code : EXIT_AUTH_UNKNOWNRESPONSE );
+        }
+    }
+    return EXIT_NORMAL;
+}
 int main(int argc, const char * argv[]) {
     int exitStatus = 0;
 
@@ -1230,24 +1245,14 @@ int main(int argc, const char * argv[]) {
             return exitStatus==EXIT_CLEAN ? 0 : exitStatus;
         
         // allocate the event store
-        if ((store=[EKEventStore alloc]) == nil) {
-            _print(stderr, @"%@: Unable to allocate the Reminders storage access.\n", MYNAME);
-            return EXIT_FAIL_ALLOC;
+        exitStatus = initializeStoreIfNotAlreadyInitialized();
+        if (! exitStatus) {
+            if (command != CMD_ADD) {
+                allReminders = fetchReminders();
+                calendars = sortReminders(allReminders);
+            }
+            exitStatus = validateArguments();
         }
-        
-        // init with access to Reminders
-        NSError *error;
-        if ((store=[store initWithAccessToRemindersReturningError:&error]) == nil) {
-            _print(stderr, @"%@: %@.\n", MYNAME,localizedUnderlyingError(error));
-            return (int) error.code;
-        }
-
-        if (command != CMD_ADD) {
-            allReminders = fetchReminders();
-            calendars = sortReminders(allReminders);
-        }
-
-        exitStatus = validateArguments();
         if (! exitStatus)
             exitStatus = handleCommand(itemArgs);
     }
