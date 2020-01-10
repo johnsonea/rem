@@ -1152,7 +1152,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     if (res == EXIT_CLEAN)
         res = parseTimeSeparatedByColons(snoozeSecondsString,&secsDouble);
     if (res == EXIT_CLEAN) { // couldn't match either pattern
-        _print(stderr, @"%@: %@bad snooze duration \"%@\".\n", MYNAME, snoozeSecondsString);
+        _print(stderr, @"%@: bad snooze duration \"%@\".\n", MYNAME, snoozeSecondsString);
         return EXIT_INVARG_BADSNOOZE;
     } else if (res != EXIT_NORMAL)
         return res; // error message will already have been printed
