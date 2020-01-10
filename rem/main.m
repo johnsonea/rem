@@ -130,8 +130,10 @@ static void _usage()
     _print(stdout, @"\t%@ add [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] ...\n\t%@     [(--arriving | --leaving) (<address> | <latitude,longitude>)] ...\n\t%@     [--note <note>] [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,SPACES,useAdvanced?[NSString stringWithFormat:@" ... \n\t%@     [--advanced] ... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--ALARM  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES,SPACES]:@"");
     _print(stdout, @"\t%@ cat <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n",MYNAME);
     _print(stdout, @"\t%@ done <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n",MYNAME);
+    _print(stdout, @"\t\t==> to mark default-list reminders complete: %@ <item1> [<item2> ...]\n",COMMANDS[CMD_DONE]);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ snooze <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
+    _print(stdout, @"\t\t==> to snooze default-list reminders: %@ <seconds> <item1> [<item2> ...]\n",COMMANDS[CMD_SNOOZE]);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
     _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
     _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n");
@@ -168,6 +170,22 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     
     // check for initial switches (none yet)
 
+    NSString *app = [appPath lastPathComponent];
+    if ([[app lowercaseString] isEqualToString:COMMANDS[CMD_SNOOZE]] || [[app lowercaseString] isEqualToString:COMMANDS[CMD_DONE]]) { // if called as "snooze" (or "done"), insert "snooze defaultCalendarName" as first arguments
+        // aasume the default calendar (if one is designated)
+        int res = initializeStoreIfNotAlreadyInitialized();
+        if (res)
+            return res;
+        NSString *defaultCalendarName = [[store defaultCalendarForNewReminders] title];
+        if (defaultCalendarName == nil) {
+            _print(stderr, @"%@: when the app name is \"%@\", the default calendar is assumed, but there is no calendar has been designated as the default\n", MYNAME, app);
+            return EXIT_INVARG_NODEFAULTCALENDAR;
+        }
+        [args unshift:defaultCalendarName];
+        // put the command back
+        [args unshift:app];
+    }
+    
     // args array is empty, command was excuted without arguments
     if (args.count == 0) {
         command = CMD_LS;
