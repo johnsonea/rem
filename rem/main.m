@@ -145,10 +145,10 @@ static void _usage()
     @returns an exit status (0 for no error)
     @description Parse command-line arguments and populate appropriate variables
  */
-static int parseArguments(NSMutableArray **itemArgs)
+static int parseArguments(NSMutableArray **itemArgsRef)
 {
-    NSMutableArray *args = *itemArgs = [NSMutableArray arrayWithArray:[[NSProcessInfo processInfo] arguments]];
-    [args shift]; // pop off application argument
+    NSMutableArray *args = *itemArgsRef = [NSMutableArray arrayWithArray:[[NSProcessInfo processInfo] arguments]];
+    NSString *appPath = [args shift]; // pop off application argument
     
     // check for initial switches (none yet)
 
