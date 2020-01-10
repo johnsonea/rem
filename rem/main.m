@@ -890,6 +890,16 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     // create the reminder
     reminder = [EKReminder reminderWithEventStore:store];
     reminder.calendar = [store defaultCalendarForNewReminders];
+    if (reminder.calendar == nil) {
+        NSArray<EKCalendar *> *allCalendars = [store calendarsForEntityType:EKEntityTypeReminder];
+        if (allCalendars && allCalendars.count) {
+            reminder.calendar = allCalendars[0];
+            _print(stderr, @"%@: warning: \"add\" is using the first calendar (%@) since there is no default calendar\n", MYNAME, reminder.calendar.title);
+        } else {
+            _print(stderr, @"%@: cannot \"add\" when there is no default calendar\n", MYNAME);
+            return EXIT_INVARG_NODEFAULTCALENDAR;
+        }
+    }
     reminder.title = reminderTitle;
     reminder.priority = priority;
     if (noteString) reminder.notes=noteString;
