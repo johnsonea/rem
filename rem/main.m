@@ -173,6 +173,16 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     NSString *app = [appPath lastPathComponent];
     if ([[app lowercaseString] isEqualToString:COMMANDS[CMD_SNOOZE]] || [[app lowercaseString] isEqualToString:COMMANDS[CMD_DONE]]) { // if called as "snooze" (or "done"), insert "snooze defaultCalendarName" as first arguments
         // aasume the default calendar (if one is designated)
+        if (args && args.count &&
+            ([[args[0] lowercaseString] isEqualToString:COMMANDS[CMD_HELP]] // help
+             ||
+             [[args[0] lowercaseString] isEqualToString:[SWITCH_LONGDASH stringByAppendingString:COMMANDS[CMD_HELP]]] // --help
+             ||
+             [[args[0] lowercaseString] isEqualToString:[SWITCH_SHORTDASH stringByAppendingString:[COMMANDS[CMD_HELP] substringToIndex:1]]] // -h
+             )) {
+                    _usage();
+                    return EXIT_CLEAN;
+        }
         int res = initializeStoreIfNotAlreadyInitialized();
         if (res)
             return res;
@@ -224,8 +234,7 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     if (command == CMD_HELP) {
         _usage();
         return EXIT_CLEAN;
-    }
-    else if (command == CMD_VERSION) {
+    } else if (command == CMD_VERSION) {
         _version();
         return EXIT_CLEAN;
     }
