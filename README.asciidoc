@@ -69,7 +69,7 @@ with the Apache License v2.0.
 LICENSE
 -------
 
-Copyright (c) 2019 Erik A. Johnson.
+Copyright (c) 2019-20 Erik A. Johnson.
 Portions Copyright (c) 2012 Kevin Y. Kim
 
 Licensed under the Apache License, Version 2.0 (the "License");

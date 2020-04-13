@@ -2,10 +2,10 @@
 //  main.m
 //  rem
 //
-//  Created by Kevin Y. Kim on 10/15/12.
-//  Copyright (c) 2012 kykim, inc. All rights reserved.
-//
-//  Modified by Erik A. Johnson during 10/29/2019 - 12/09/2019
+//  Originally created by Kevin Y. Kim on 10/15/12.
+//  Copyright (c) 2012 kykim, inc. and modifications
+//  Copyright (c) 2019-20 Erik A. Johnson
+//  All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -37,7 +37,7 @@
 #define SHOW_NEW_DETAILS 1
 #define RM_ASK_BEFORE 1
 
-NSString *VERSION_STRING = @"0.01eaj";
+NSString *VERSION_STRING = @"0.02eaj";
 NSString *REMINDER_TITLE_PREFIX = @"--";
 NSString *REMINDER_TITLE_REGEXPREF = @"/";
 NSString *PLUS_PREFIX = @"+";

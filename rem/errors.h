@@ -2,8 +2,8 @@
 //  errors.h
 //  rem
 //
-//  Created by Erik A Johnson on 10/29/19 - 12/09/2019.
-//  Copyright © 2019 Erik A Johnson. All rights reserved.
+//  Created by Erik A Johnson on 10/29/19.
+//  Copyright © 2019-20 Erik A Johnson. All rights reserved.
 //
 
 #ifndef errors_h
