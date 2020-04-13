@@ -11,6 +11,10 @@
 
 #define SHOW_UNDOCUMENTED 1
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 void _print(FILE *file, NSString *format, ...);
 
 #define NSLog(format, ...) NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__)
