@@ -75,6 +75,15 @@
         return NO;
     return (secsInFuture < 0.0);
 }
+- (BOOL)isInPast {
+    return [self isInPastForReminder:nil];
+}
+- (BOOL)isInPastForReminder:(EKReminder* _Nullable)reminder {
+    NSTimeInterval secsInFuture = [self timeIntervalSinceNowForReminder:reminder];
+    if isnan(secsInFuture) // cannot determine
+        return NO;
+    return (secsInFuture < 0.0);
+}
 
 - (BOOL)hasDefault {
     return [self respondsToSelector:@selector(isDefault)];

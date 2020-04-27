@@ -59,7 +59,14 @@
                 [alarms push:alarm];
     return [alarms copy]; // return an immutable copy
 }
-
+- (BOOL)allAlarmsInPast {
+    if (self.hasAlarms && self.alarms) {
+        for (EKAlarm *alarm in self.alarms)
+            if (![alarm isInPastForReminder:self])
+                return NO;
+    }
+    return YES;
+}
 
 /* other convenience methods */
 

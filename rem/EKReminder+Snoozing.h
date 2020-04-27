@@ -20,6 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)hasUnsnoozedPastAlarms;
 - (EKAlarm* _Nullable)firstUnsnoozedPastAlarm;
 - (NSArray<EKAlarm*>* _Nonnull)unsnoozedPastAlarms;
+- (BOOL)allAlarmsInPast;
 
 /* other convenience methods */
 

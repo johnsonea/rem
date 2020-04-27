@@ -31,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder; // returns NAN if there is no identifiable date
 - (BOOL)isUnsnoozedAndInPast;
 - (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder;
+- (BOOL)isInPast;
+- (BOOL)isInPastForReminder:(EKReminder* _Nullable)reminder;
 
 NSString *structuredLocationString(EKStructuredLocation *loc);
 - (NSString *)proximityStr;

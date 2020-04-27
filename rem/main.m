@@ -45,7 +45,7 @@ NSString *MINUS_PREFIX = @"-";
 NSString *SWITCH_SHORTDASH = @"-";
 NSString *SWITCH_LONGDASH  = @"--";
 
-#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"snooze", @"help", @"version" ]
+#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"ignored", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
     CMD_UNKNOWN = -1,
     CMD_LS = 0,
@@ -54,6 +54,7 @@ typedef enum _CommandType {
     CMD_CAT,
     CMD_DONE,
     CMD_EVERY, // list everything
+    CMD_IGNORED, // list those with past alarms
     CMD_SNOOZE, // snooze a reminder
     CMD_HELP,
     CMD_VERSION
@@ -132,6 +133,7 @@ static void _usage()
     _print(stdout, @"\t%@ done <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n",MYNAME);
     _print(stdout, @"\t\t==> to mark default-list reminders complete: %@ <item1> [<item2> ...]\n",COMMANDS[CMD_DONE]);
     _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
+    _print(stdout, @"\t%@ ignored [<list>]\n\t\tList ignored reminders [that have alarms all in the past] (default is all lists)\n",MYNAME);
     _print(stdout, @"\t%@ snooze <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
     _print(stdout, @"\t\t==> to snooze default-list reminders: %@ <seconds> <item1> [<item2> ...]\n",COMMANDS[CMD_SNOOZE]);
     _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
@@ -332,7 +334,7 @@ static NSDictionary* sortReminders(NSArray *reminders)
  */
 static int validateArguments()
 {
-    if ((command == CMD_LS || command == CMD_EVERY) && calendarTitle==nil) {
+    if ((command == CMD_LS || command == CMD_EVERY || command == CMD_IGNORED) && calendarTitle==nil) {
         return EXIT_NORMAL;
     }
 
@@ -348,7 +350,7 @@ static int validateArguments()
         }
     }
 
-    if (command == CMD_LS || command == CMD_EVERY) // list all reminders in calendar
+    if (command == CMD_LS || command == CMD_EVERY || command == CMD_IGNORED) // list all reminders in calendar
         return EXIT_NORMAL;
     
     if (command == CMD_SNOOZE && snoozeSecondsString == nil) {
@@ -609,16 +611,29 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         _printCalendarLine. Retrieve the calendars reminders and display via _printReminderLine.
         Each reminder is prepended with an index/id for other commands
  */
-static void _listCalendar(NSString *calendarTitle, BOOL last, BOOL withDetails)
+static void _listCalendar(NSString *calendarTitle, BOOL last, BOOL withDetails, BOOL onlyIgnoredAlarms)
 {
     _printCalendarLine(calendarTitle, last);
     NSArray *reminders = [calendars valueForKey:calendarTitle];
+    BOOL isIgnoredAlarms[reminders.count];
+    NSUInteger lastIgnored = reminders.count;
+    if (onlyIgnoredAlarms) {
+        for (NSUInteger i = 0; i < reminders.count; i++) {
+            EKReminder *r = [reminders objectAtIndex:i];
+            isIgnoredAlarms[i] = r.hasAlarms && r.alarms && [r allAlarmsInPast];
+            if (isIgnoredAlarms[i])
+                lastIgnored = i;
+        }
+    }
+    // NSMutableArray *a = NSArray
     for (NSUInteger i = 0; i < reminders.count; i++) {
         EKReminder *r = [reminders objectAtIndex:i];
-        BOOL isLastReminder = (r == [reminders lastObject]);
-        _printReminderLine(i+1, r.title, isLastReminder, last);
-        if (withDetails) {
-            showReminder(r, NO,isLastReminder,last);
+        if (!onlyIgnoredAlarms || isIgnoredAlarms[i]) {
+            BOOL isLastReminder = onlyIgnoredAlarms ? (i == lastIgnored) : (r == [reminders lastObject]);
+            _printReminderLine(i+1, r.title, isLastReminder, last);
+            if (withDetails) {
+                showReminder(r, NO,isLastReminder,last);
+            }
         }
     }
 }
@@ -631,14 +646,14 @@ static void _listCalendar(NSString *calendarTitle, BOOL last, BOOL withDetails)
     @description list all reminders if no calendar (reminder list) specified,
         or list reminders in specified calendar
  */
-static void listReminders(NSString *calendarTitle, BOOL withDetails)
+static void listReminders(NSString *calendarTitle, BOOL withDetails, BOOL onlyIgnoredAlarms)
 {
-    _print(stdout, @"Reminders\n");
+    _print(stdout, @"Reminders%@\n", onlyIgnoredAlarms ? @" (ignored alarmed only)" : @"");
     if (calendarTitle) {
-        _listCalendar(calendarTitle, YES, withDetails);
+        _listCalendar(calendarTitle, YES, withDetails, onlyIgnoredAlarms);
     } else {
         for (calendarTitle in calendars) {
-            _listCalendar(calendarTitle, (calendarTitle == [[calendars allKeys] lastObject]), withDetails);
+            _listCalendar(calendarTitle, (calendarTitle == [[calendars allKeys] lastObject]), withDetails, onlyIgnoredAlarms);
         }
     }
 }
@@ -1215,7 +1230,8 @@ static int handleCommand(NSMutableArray *itemArgs)
     switch (command) {
         case CMD_LS:
         case CMD_EVERY:
-            listReminders(calendarTitle, command==CMD_EVERY);
+        case CMD_IGNORED:
+            listReminders(calendarTitle, command==CMD_EVERY, command==CMD_IGNORED);
             return EXIT_NORMAL;
             break;
         case CMD_ADD:
