@@ -18,6 +18,7 @@
 		0C6441D12369473E00F3366A /* EKReminder+Snoozing.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C6441D02369473E00F3366A /* EKReminder+Snoozing.m */; };
 		0CD2FF00238DB04B0007EE07 /* NSObject+performSelectorSafely.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CD2FEFF238DB04B0007EE07 /* NSObject+performSelectorSafely.m */; };
 		0CD8D39C236BA77900C10AE9 /* NSMutableArray+Queue.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CD8D39B236BA77900C10AE9 /* NSMutableArray+Queue.m */; };
+		0CD989DE245B7C8100897B0A /* EKEventStore+Utilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CD989DD245B7C8100897B0A /* EKEventStore+Utilities.m */; };
 		0CEBAF482398A634005DEEF2 /* NSString+regex.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CEBAF472398A634005DEEF2 /* NSString+regex.m */; };
 		E5C96A3B16261A4A00611642 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E5C96A3A16261A4A00611642 /* Foundation.framework */; };
 		E5C96A3E16261A4A00611642 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E5C96A3D16261A4A00611642 /* main.m */; };
@@ -61,6 +62,8 @@
 		0CD2FEFF238DB04B0007EE07 /* NSObject+performSelectorSafely.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSObject+performSelectorSafely.m"; sourceTree = "<group>"; };
 		0CD8D39A236BA77900C10AE9 /* NSMutableArray+Queue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSMutableArray+Queue.h"; sourceTree = "<group>"; };
 		0CD8D39B236BA77900C10AE9 /* NSMutableArray+Queue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSMutableArray+Queue.m"; sourceTree = "<group>"; };
+		0CD989DC245B7C8100897B0A /* EKEventStore+Utilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EKEventStore+Utilities.h"; sourceTree = "<group>"; };
+		0CD989DD245B7C8100897B0A /* EKEventStore+Utilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "EKEventStore+Utilities.m"; sourceTree = "<group>"; };
 		0CEBAF462398A634005DEEF2 /* NSString+regex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSString+regex.h"; sourceTree = "<group>"; };
 		0CEBAF472398A634005DEEF2 /* NSString+regex.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSString+regex.m"; sourceTree = "<group>"; };
 		E5467EA1162F3AFB00676892 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
@@ -146,6 +149,8 @@
 				0C6441CB2369217200F3366A /* EKEventStore+Synchronous.h */,
 				0C6441CC2369217200F3366A /* EKEventStore+Synchronous.m */,
 				0C6441CE236923B500F3366A /* errors.h */,
+				0CD989DC245B7C8100897B0A /* EKEventStore+Utilities.h */,
+				0CD989DD245B7C8100897B0A /* EKEventStore+Utilities.m */,
 				0C6441C823690DF800F3366A /* EKAlarm+stringWith+MutableAlarm.h */,
 				0C6441C923690DF800F3366A /* EKAlarm+stringWith+MutableAlarm.m */,
 				0CEBAF462398A634005DEEF2 /* NSString+regex.h */,
@@ -221,6 +226,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C6441D12369473E00F3366A /* EKReminder+Snoozing.m in Sources */,
+				0CD989DE245B7C8100897B0A /* EKEventStore+Utilities.m in Sources */,
 				0C6441CD2369217200F3366A /* EKEventStore+Synchronous.m in Sources */,
 				0C0C6DC7236E786600E60A89 /* SystemEventsAccess.m in Sources */,
 				0CD2FF00238DB04B0007EE07 /* NSObject+performSelectorSafely.m in Sources */,

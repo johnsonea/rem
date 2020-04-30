@@ -12,6 +12,7 @@
 #import <EventKit/EventKit.h>
 #import "EKAlarm+stringWith+MutableAlarm.h"
 #import "EKEventStore+Synchronous.h"
+#import "EKEventStore+Utilities.h"
 #import "errors.h"
 #import "main.h"
 #import "NSObject+performSelectorSafely.h"
@@ -273,12 +274,11 @@ static int parseArguments(NSMutableArray **itemArgsRef)
  */
 static NSArray* fetchReminders()
 // TO DO: (1) move this to EKEventStore+...
-//        (2) if calendar was specified on command line, search only for that calendar
-//        (3) use flags (includeCompleted, includeIncomplete) to decide if [self predicateForRemindersInCalendars:theCalendarsOrNil] or [self predicateForIncompleteRemindersWithDueDateStarting:NOW ending:nil calendars:theCalendarsOrNil] or [self predicateForCompletedRemindersWithCompletionDateStarting:nil ending:NOW calendars:theCalendarsOrNil]
+//        (2) use flags (includeCompleted, includeIncomplete) to decide if [self predicateForRemindersInCalendars:theCalendarsOrNil] or [self predicateForIncompleteRemindersWithDueDateStarting:NOW ending:nil calendars:theCalendarsOrNil] or [self predicateForCompletedRemindersWithCompletionDateStarting:nil ending:NOW calendars:theCalendarsOrNil]
 {
     __block NSArray *reminders = nil;
     __block BOOL fetching = YES;
-    NSPredicate *predicate = [store predicateForRemindersInCalendars:nil];
+    NSPredicate *predicate = [store predicateForRemindersInCalendars:[store reminderCalendarsWithTitle:calendarTitle]];
     [store fetchRemindersMatchingPredicate:predicate completion:^(NSArray *ekReminders) {
         reminders = ekReminders;
         fetching = NO;
