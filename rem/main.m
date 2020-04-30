@@ -389,11 +389,11 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
         // NOTE: neither "title" nor "isRegularExpression" need __block because they will not be modified after the predicate block is created nor in the predicate block
         NSString *title = [reminder_id_str substringFromIndex:[REMINDER_TITLE_PREFIX length]];
         BOOL isRegularExpression = [title hasPrefix:REMINDER_TITLE_REGEXPREF];
-        __block NSError *error; // needs __block because predicate block may modify it
         if (isRegularExpression)
             title = [title substringFromIndex:[REMINDER_TITLE_REGEXPREF length]];
         NSPredicate *predicate;
         // predicate = [NSPredicate predicateWithFormat:@"title == %@",title];
+        __block NSError *error; // needs __block because predicate block may modify it
         predicate = [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
             EKReminder *reminder = (EKReminder*)object;
             NSError *blockError;
@@ -436,7 +436,7 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
         }
         *reminderRef = filteredReminders[0];
         NSDictionary *cals = calendarTitle ? @{calendarTitle:reminders} : calendars;
-        for (calendarTitle in cals) {
+        for (NSString *calendarTitle in cals) { // previously had "for (calendarTitle in cals) {" -- using the global value -- because the global calendarTitle previously had to match reminder.calendar.title for at least one of the functions remove*, show*, complete*, or snooze* (I don't remember which ones) in handleReminders
             reminders = calendars[calendarTitle];
             *reminder_id_ref = [reminders indexOfObject:*reminderRef];
             if (*reminder_id_ref == NSNotFound)
@@ -1248,7 +1248,7 @@ static int handleCommand(NSMutableArray *itemArgs)
     while (1) {
         EKReminder *reminder = nil;
         NSUInteger reminder_id = 0;
-        NSString *prevCalendarTitle = calendarTitle;
+        // NSString *prevCalendarTitle = calendarTitle; // used previously because calendarTitle previously had to match reminder.calendar.title for some of the functions in this loop
         int exitStatus = nextReminderFromArgs(itemArgs, &reminder, &reminder_id);
         if (exitStatus!=EXIT_NORMAL || reminder==nil)
             return exitStatus;
@@ -1270,7 +1270,7 @@ static int handleCommand(NSMutableArray *itemArgs)
         }
         if (exitStatus != EXIT_NORMAL)
             return exitStatus;
-        calendarTitle = prevCalendarTitle;
+        // calendarTitle = prevCalendarTitle; // used previously because calendarTitle previously had to match reminder.calendar.title for some of the functions in this loop
     }
     return EXIT_NORMAL;
 }
