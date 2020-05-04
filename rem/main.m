@@ -24,10 +24,9 @@
 
 /*
  TO DO:
-    * add "undone" to change completed back to not completed
-    * add "finished" to get completed reminders
     * add: allow additional argument for due date&time
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
+    * undone: save info on now-uncompleted reminder so we can "undo" it and make it completed again
     * rm: save reminder info so we can unrm
  */
 
@@ -46,8 +45,10 @@ NSString *SWITCH_SHORTDASH = @"-";
 NSString *SWITCH_LONGDASH  = @"--";
 NSString *ITEM_NOTIFIED = @"notified";
 NSString *ITEM_LASTCOMPLETED = @"lastcompleted";
+NSString *COMPLETED_SUFFIX = @"-completed";
+NSString *ALL_SUFFIX = @"-ALL";
 
-#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"ignored", @"snooze", @"help", @"version" ]
+#define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"undone", @"every", @"ignored", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
     CMD_UNKNOWN = -1,
     CMD_LS = 0,
@@ -55,6 +56,7 @@ typedef enum _CommandType {
     CMD_RM,
     CMD_CAT,
     CMD_DONE,
+    CMD_UNDONE,
     CMD_EVERY, // list everything
     CMD_IGNORED, // list those with past alarms
     CMD_SNOOZE, // snooze a reminder
@@ -135,6 +137,7 @@ static void _usage()
     _print(stdout, @"\t%@ %@ <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n", MYNAME, COMMANDS[CMD_CAT]);
     _print(stdout, @"\t%@ %@ <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n", MYNAME, COMMANDS[CMD_DONE]);
     _print(stdout, @"\t\t==> to mark default-list reminders complete: %@ <item1> [<item2> ...]\n",COMMANDS[CMD_DONE]);
+    _print(stdout, @"\t%@ %@ <list>%@ <item1> [<item2> ...]\n\t\tMark completed reminder(s) as incomplete\n", MYNAME, COMMANDS[CMD_UNDONE], COMPLETED_SUFFIX);
     _print(stdout, @"\t%@ %@ [<list>]\n\t\tList reminders with details (default is all lists)\n", MYNAME, COMMANDS[CMD_EVERY]);
     _print(stdout, @"\t%@ %@ [<list>]\n\t\tList ignored reminders [that have alarms all in the past] (default is all lists)\n", MYNAME, COMMANDS[CMD_IGNORED]);
     _print(stdout, @"\t%@ %@ <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n", MYNAME, COMMANDS[CMD_SNOOZE]);
@@ -143,7 +146,10 @@ static void _usage()
     _print(stdout, @"\t%@ %@\n\t\tShow version information\n", MYNAME, COMMANDS[CMD_VERSION]);
     _print(stdout, @"\tNote: commands can be like \"%@\" or \"%@\" or \"%@\".\n", COMMANDS[CMD_LS], [SWITCH_LONGDASH stringByAppendingString:COMMANDS[CMD_LS]], [SWITCH_SHORTDASH stringByAppendingString:[COMMANDS[CMD_LS] substringToIndex:1]]);
     _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a title regular expression (no trailing \"/\").\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
-    _print(stdout, @"\tNote: <list> may be an empty string \"\" or \"*\" to denote searching all lists\n\t      (invalid if reminder specified by integer index, valid with title/regex)\n");
+    _print(stdout, @"\tNote: <list> may be an empty string \"\" or \"*\" to denote searching all lists\n\t        (invalid if reminder specified by integer index, valid with title/regex).\n");
+    _print(stdout, @"\t      Normally, only uncompleted reminders are read (completed ones ignored).\n");
+    _print(stdout, @"\t      If <list> ends with \"%@\", or if the command is \"%@\", then\n\t        only completed reminders are read.\n", COMPLETED_SUFFIX, COMMANDS[CMD_UNDONE]);
+    _print(stdout, @"\t      If <list> ends with \"%@\" then all reminders are read.\n", ALL_SUFFIX);
 }
 
 int initializeStoreIfNotAlreadyInitialized() {
@@ -208,7 +214,7 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     }
 
     NSString *cmd = [args shift];
-    isUppercaseCommand = [[cmd uppercaseString] isEqualToString:cmd]; // if so, then no need to warn about "DONE" and "RM"
+    isUppercaseCommand = [[cmd uppercaseString] isEqualToString:cmd]; // if so, then no need to warn about "RM", "DONE" and "UNDONE"
     cmd = [cmd lowercaseString];
     // allow --ls in addition to ls, etc.
     BOOL longSwitch = [cmd hasPrefix:SWITCH_LONGDASH];
@@ -250,13 +256,43 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     }
 
     // get the reminder list (calendar) if exists
+    BOOL calendarTitleHasSuffix = NO;
     if (args.count) {
         calendarTitle = [args shift];
+        if ([calendarTitle hasSuffix:COMPLETED_SUFFIX]) {
+            fetchCompleted = YES;
+            fetchIncompleted = NO;
+            calendarTitle = [calendarTitle substringToIndex:[calendarTitle length]-[COMPLETED_SUFFIX length]];
+            calendarTitleHasSuffix = YES;
+        } else if ([calendarTitle hasSuffix:ALL_SUFFIX]) {
+            fetchCompleted = YES;
+            fetchIncompleted = YES;
+            calendarTitle = [calendarTitle substringToIndex:[calendarTitle length]-[ALL_SUFFIX length]];
+            calendarTitleHasSuffix = YES;
+        }
         if ([calendarTitle isEqualToString:@""] || [calendarTitle isEqualToString:@"*"]) {
             calendarTitle = nil; // denotes "all calendars"
         }
     }
-
+    
+    if (command == CMD_UNDONE && !calendarTitleHasSuffix) {
+        fetchCompleted = YES;
+        fetchIncompleted = NO;
+    }
+    
+    // make sure we have fetch* compatible with the command
+    if (command == CMD_UNDONE && !fetchCompleted) {
+        _print(stderr, @"%@: Cannot %@ (mark as uncompleted) when not reading completed reminders.\n", MYNAME, COMMANDS[command]);
+        return EXIT_INVARG_BADFETCH;
+    } else if (command == CMD_DONE && !fetchIncompleted) {
+        _print(stderr, @"%@: Cannot %@ (mark as completed) when reading only completed reminders.\n", MYNAME, COMMANDS[command]);
+        return EXIT_INVARG_BADFETCH;
+    } else if (command == CMD_SNOOZE && !fetchIncompleted) {
+           _print(stderr, @"%@: Cannot %@ when reading only completed reminders.\n", MYNAME, COMMANDS[command]);
+           return EXIT_INVARG_BADFETCH;
+    }
+    
+    // fetch the snooze duration if we are snoozing
     if (command == CMD_SNOOZE) {
         snoozeSecondsString = [args shift];
     }
@@ -1159,6 +1195,34 @@ static int completeReminder(EKReminder *reminder, NSUInteger reminder_id)
     return EXIT_NORMAL;
 }
 
+
+/*!
+    @function uncompleteReminder
+    @abstract mark specified reminder as incomplete
+    @returns an exit status (0 for no error)
+    @param reminder
+        the reminder to mark as incompleted
+    @description mark specified reminder as incomplete
+ */
+static int uncompleteReminder(EKReminder *reminder, NSUInteger reminder_id)
+{
+    if (!isUppercaseCommand && !continueWithReminder(@"Mark uncompleted the",reminder,reminder_id)) {
+        _print(stdout, @"not undone.\n");
+        return EXIT_NORMAL;
+    }
+    reminder.completed = NO;
+    NSString *title = reminder.title;
+    NSError *error;
+    BOOL success = [store saveReminder:reminder commit:YES error:&error];
+    if (success) {
+        _print(stdout, @"Marked as uncpompleted the reminder \"%@\"\n", title);
+    } else {
+        _print(stderr, @"%@: Error marking as uncompleted the Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
+        return EXIT_FAIL_COMPLETE;
+    }
+    return EXIT_NORMAL;
+}
+
 /*!
     @function snoozeReminder
     @abstract delay the snooze on a not-completed reminder
@@ -1269,6 +1333,9 @@ static int handleCommand(NSMutableArray *itemArgs)
                 break;
             case CMD_DONE:
                 exitStatus = completeReminder(reminder, reminder_id);
+                break;
+            case CMD_UNDONE:
+                exitStatus = uncompleteReminder(reminder, reminder_id);
                 break;
             case CMD_SNOOZE:
                 exitStatus = snoozeReminder(reminder, reminder_id, snoozeSecondsString);
