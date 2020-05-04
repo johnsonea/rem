@@ -128,19 +128,19 @@ static void _usage()
     NSString *SPACES = [@"" stringByPaddingToLength:[MYNAME length]
          withString:@" " startingAtIndex:0];
     _print(stdout, @"Usage:\n");
-    _print(stdout, @"\t%@ [ls [<list>]]\n\t\tList reminders (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ rm <list> <item> [<item2> ...]\n\t\tRemove reminder(s) from list\n",MYNAME);
-    _print(stdout, @"\t%@ add [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] ...\n\t%@     [(--arriving | --leaving) (<address> | <latitude,longitude>)] ...\n\t%@     [--note <note>] [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n",MYNAME,SPACES,SPACES,useAdvanced?[NSString stringWithFormat:@" ... \n\t%@     [--advanced] ... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--ALARM  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ",SPACES,SPACES,SPACES,SPACES,SPACES]:@"");
-    _print(stdout, @"\t%@ cat <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n",MYNAME);
-    _print(stdout, @"\t%@ done <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n",MYNAME);
+    _print(stdout, @"\t%@ [%@ [<list>]]\n\t\tList reminders (default is all lists)\n", MYNAME,COMMANDS[CMD_LS]);
+    _print(stdout, @"\t%@ %@ <list> <item> [<item2> ...]\n\t\tRemove reminder(s) from list\n", MYNAME, COMMANDS[CMD_RM]);
+    _print(stdout, @"\t%@ %@ [--date <date> | --date -<secondsBeforeNow> | --date +<secondsAfterNow>] ...\n\t%@     [(--arriving | --leaving) (<address> | <latitude,longitude>)] ...\n\t%@     [--note <note>] [--priority <integer0-9>] %@<remindertitle>\n\t\tAdd reminder to your default list\n", MYNAME, COMMANDS[CMD_ADD], SPACES, SPACES, useAdvanced?[NSString stringWithFormat:@" ... \n\t%@     [--advanced] ... \n\t%@     [--DUE   [   <dueDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--START [ <startDate> | -<secondsBeforeNow> | +<secondsAfterNow>]] ... \n\t%@     [--ALARM  [<remindDate> | -<secondsBeforeDueDate> | +<secondsAfterDueDate>]] ...\n\t%@     ", SPACES, SPACES, SPACES, SPACES, SPACES]:@"");
+    _print(stdout, @"\t%@ %@ <list> <item1> [<item2> ...]\n\t\tShow reminder detail\n", MYNAME, COMMANDS[CMD_CAT]);
+    _print(stdout, @"\t%@ %@ <list> <item1> [<item2> ...]\n\t\tMark reminder(s) as complete\n", MYNAME, COMMANDS[CMD_DONE]);
     _print(stdout, @"\t\t==> to mark default-list reminders complete: %@ <item1> [<item2> ...]\n",COMMANDS[CMD_DONE]);
-    _print(stdout, @"\t%@ every [<list>]\n\t\tList reminders with details (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ ignored [<list>]\n\t\tList ignored reminders [that have alarms all in the past] (default is all lists)\n",MYNAME);
-    _print(stdout, @"\t%@ snooze <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n",MYNAME);
+    _print(stdout, @"\t%@ %@ [<list>]\n\t\tList reminders with details (default is all lists)\n", MYNAME, COMMANDS[CMD_EVERY]);
+    _print(stdout, @"\t%@ %@ [<list>]\n\t\tList ignored reminders [that have alarms all in the past] (default is all lists)\n", MYNAME, COMMANDS[CMD_IGNORED]);
+    _print(stdout, @"\t%@ %@ <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n", MYNAME, COMMANDS[CMD_SNOOZE]);
     _print(stdout, @"\t\t==> to snooze default-list reminders: %@ <seconds> <item1> [<item2> ...]\n",COMMANDS[CMD_SNOOZE]);
-    _print(stdout, @"\t%@ help\n\t\tShow this text\n",MYNAME);
-    _print(stdout, @"\t%@ version\n\t\tShow version information\n",MYNAME);
-    _print(stdout, @"\tNote: commands can be like \"ls\" or \"--ls\" or \"-l\".\n");
+    _print(stdout, @"\t%@ %@\n\t\tShow this text\n", MYNAME, COMMANDS[CMD_HELP]);
+    _print(stdout, @"\t%@ %@\n\t\tShow version information\n", MYNAME, COMMANDS[CMD_VERSION]);
+    _print(stdout, @"\tNote: commands can be like \"%@\" or \"%@\" or \"%@\".\n", COMMANDS[CMD_LS], [SWITCH_LONGDASH stringByAppendingString:COMMANDS[CMD_LS]], [SWITCH_SHORTDASH stringByAppendingString:[COMMANDS[CMD_LS] substringToIndex:1]]);
     _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a title regular expression (no trailing \"/\").\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
     _print(stdout, @"\tNote: <list> may be an empty string \"\" or \"*\" to denote searching all lists\n\t      (invalid if reminder specified by integer index, valid with title/regex)\n");
 }
@@ -355,7 +355,7 @@ static int validateArguments()
         return EXIT_NORMAL;
     
     if (command == CMD_SNOOZE && snoozeSecondsString == nil) {
-        _print(stderr, @"%@: need # of seconds to snooze\n", MYNAME);
+        _print(stderr, @"%@: need # of seconds to %@\n", MYNAME, COMMANDS[CMD_SNOOZE]);
         return EXIT_INVARG_SNOOZEMISSING;
     }
     
@@ -936,7 +936,7 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
             }
             priority = (NSUInteger) priorityInteger;
         } else {
-            _print(stderr, @"%@: unknown \"add\" switch \"--%@\".\n", MYNAME, swtch);
+            _print(stderr, @"%@: unknown \"%@\" switch \"--%@\".\n", MYNAME, COMMANDS[CMD_ADD], swtch);
             return EXIT_INVARG_BADSWITCH;
         }
     }
@@ -945,7 +945,7 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
     NSString *reminderTitle = [[itemArgs subarrayWithRange:NSMakeRange(0, [itemArgs count])] componentsJoinedByString:@" "];
     [itemArgs removeAllObjects];
     if (!reminderTitle || !reminderTitle.length) {
-        _print(stderr, @"%@: cannot \"add\" with an empty title\n", MYNAME);
+        _print(stderr, @"%@: cannot \"%@\" with an empty title\n", MYNAME, COMMANDS[CMD_ADD]);
         return EXIT_INVARG_BADTITLE;
     }
     
@@ -956,9 +956,9 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
         NSArray<EKCalendar *> *allCalendars = [store calendarsForEntityType:EKEntityTypeReminder];
         if (allCalendars && allCalendars.count) {
             reminder.calendar = allCalendars[0];
-            _print(stderr, @"%@: warning: \"add\" is using the first calendar (%@) since there is no default calendar\n", MYNAME, reminder.calendar.title);
+            _print(stderr, @"%@: warning: \"%@\" is using the first calendar (%@) since there is no default calendar\n", MYNAME, COMMANDS[CMD_ADD], reminder.calendar.title);
         } else {
-            _print(stderr, @"%@: cannot \"add\" when there is no default calendar\n", MYNAME);
+            _print(stderr, @"%@: cannot \"%@\" when there is no default calendar\n", MYNAME, COMMANDS[CMD_ADD]);
             return EXIT_INVARG_NODEFAULTCALENDAR;
         }
     }
@@ -1149,7 +1149,7 @@ static int completeReminder(EKReminder *reminder, NSUInteger reminder_id)
     if (success) {
         _print(stdout, @"completed reminder \"%@\"\n", title);
     } else {
-        _print(stderr, @"%@: Error marking Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
+        _print(stderr, @"%@: Error marking as completed the Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
         return EXIT_FAIL_COMPLETE;
     }
     return EXIT_NORMAL;
@@ -1180,7 +1180,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     if (res == EXIT_CLEAN)
         res = parseTimeSeparatedByColons(snoozeSecondsString,&secsDouble);
     if (res == EXIT_CLEAN) { // couldn't match either pattern
-        _print(stderr, @"%@: bad snooze duration \"%@\".\n", MYNAME, snoozeSecondsString);
+        _print(stderr, @"%@: bad %@ duration \"%@\".\n", MYNAME, COMMANDS[CMD_SNOOZE], snoozeSecondsString);
         return EXIT_INVARG_BADSNOOZE;
     } else if (res != EXIT_NORMAL)
         return res; // error message will already have been printed
