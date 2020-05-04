@@ -65,6 +65,7 @@ typedef enum _CommandType {
 static CommandType command;
 BOOL isUppercaseCommand = NO;
 static NSString *calendarTitle;
+static BOOL fetchCompleted=NO, fetchIncompleted=YES;
 static NSString *reminder_id_str = nil;
 static NSString *snoozeSecondsString = nil;
 static BOOL useAdvanced = NO;
@@ -275,11 +276,15 @@ static int parseArguments(NSMutableArray **itemArgsRef)
  */
 static NSArray* fetchReminders()
 // TO DO: (1) move this to EKEventStore+...
-//        (2) use flags (includeCompleted, includeIncomplete) to decide if [self predicateForRemindersInCalendars:theCalendarsOrNil] or [self predicateForIncompleteRemindersWithDueDateStarting:NOW ending:nil calendars:theCalendarsOrNil] or [self predicateForCompletedRemindersWithCompletionDateStarting:nil ending:NOW calendars:theCalendarsOrNil]
 {
     __block NSArray *reminders = nil;
     __block BOOL fetching = YES;
-    NSPredicate *predicate = [store predicateForRemindersInCalendars:[store reminderCalendarsWithTitle:calendarTitle]];
+    NSArray<EKCalendar *> *theCalendars = [store reminderCalendarsWithTitle:calendarTitle];
+    NSPredicate *predicate
+        = (fetchCompleted && fetchIncompleted) ? [store predicateForRemindersInCalendars:theCalendars]
+        : fetchCompleted ? [store predicateForCompletedRemindersWithCompletionDateStarting:nil ending:nil calendars:theCalendars]
+        : fetchIncompleted ? [store predicateForIncompleteRemindersWithDueDateStarting:nil ending:nil calendars:theCalendars]
+        : nil; // Note: could use predicateForRemindersInCalendars and fetch them all, but it is much faster to fetch only those needed
     [store fetchRemindersMatchingPredicate:predicate completion:^(NSArray *ekReminders) {
         reminders = ekReminders;
         fetching = NO;
@@ -308,8 +313,7 @@ static NSDictionary* sortReminders(NSArray *reminders)
     if (reminders != nil && reminders.count > 0) {
         results = [NSMutableDictionary dictionary];
         for (EKReminder *r in reminders) {
-            if (r.completed)
-                continue;
+            // if ((r.completed && !fetchCompleted) || (!r.completed && !fetchIncompleted)) continue; // this line was needed when fetchReminders just fetched all reminders
 
             EKCalendar *calendar = [r calendar];
             if ([results objectForKey:calendar.title] == nil) {
