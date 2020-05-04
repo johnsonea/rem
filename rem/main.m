@@ -44,6 +44,8 @@ NSString *PLUS_PREFIX = @"+";
 NSString *MINUS_PREFIX = @"-";
 NSString *SWITCH_SHORTDASH = @"-";
 NSString *SWITCH_LONGDASH  = @"--";
+NSString *ITEM_NOTIFIED = @"notified";
+NSString *ITEM_LASTCOMPLETED = @"lastcompleted";
 
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"every", @"ignored", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
@@ -375,8 +377,11 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
         return EXIT_NORMAL; // no error, only ran out of arguments
     }
     NSString *reminder_id_str = [args shift];
-    if ([[reminder_id_str lowercaseString] isEqualToString:@"notified"]) {
-        _print(stderr, @"%@: have not written \"notified reminders\" code yet.\n", MYNAME );
+    if ([[reminder_id_str lowercaseString] isEqualToString:ITEM_NOTIFIED]) {
+        _print(stderr, @"%@: have not written \"%@ reminders\" code yet.\n", MYNAME, ITEM_NOTIFIED);
+        return EXIT_FATAL;
+    } else if ([[reminder_id_str lowercaseString] isEqualToString:ITEM_LASTCOMPLETED]) {
+        _print(stderr, @"%@: have not written \"%@ reminders\" code yet.\n", MYNAME, ITEM_LASTCOMPLETED);
         return EXIT_FATAL;
     } else if ([reminder_id_str hasPrefix:REMINDER_TITLE_PREFIX]) {
         NSArray *reminders = calendarTitle ? [calendars objectForKey:calendarTitle] : allReminders;
