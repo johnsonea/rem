@@ -35,7 +35,7 @@ static NSString *errorDomainNSStringRegex = @"default.NSString.regex";
     if (captureGroupsDictRef) *captureGroupsDictRef = nil;
     if (remainderRef) *remainderRef = nil;
     if (errorRef) *errorRef = nil;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:regexString options:NSRegularExpressionCaseInsensitive error:errorRef];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:regexString options:options error:errorRef];
     if (errorRef && *errorRef) return nil;
     if (!regex) {
         // I don't know if this can happen without *errorRef being set but just in case ...
