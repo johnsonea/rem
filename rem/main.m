@@ -27,7 +27,6 @@
     * add "undone" to change completed back to not completed
     * add "finished" to get completed reminders
     * add: allow additional argument for due date&time
-    * allow multiple <item> designations
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
     * rm: save reminder info so we can unrm
  */
@@ -115,7 +114,7 @@ void _print(FILE *file, NSString *format, ...)
  */
 static void _version()
 {
-    _print(stdout, @"%@ Version %@ build %@ %@\n",MYNAME,VERSION_STRING,@(__DATE__),@(__TIME__));
+    _print(stdout, @"%@ Version %@ build %@ %@\n", MYNAME, VERSION_STRING, @(__DATE__), @(__TIME__));
 }
 
 /*!
@@ -175,7 +174,7 @@ static int parseArguments(NSMutableArray **itemArgsRef)
 
     NSString *app = [appPath lastPathComponent];
     if ([[app lowercaseString] isEqualToString:COMMANDS[CMD_SNOOZE]] || [[app lowercaseString] isEqualToString:COMMANDS[CMD_DONE]]) { // if called as "snooze" (or "done"), insert "snooze defaultCalendarName" as first arguments
-        // aasume the default calendar (if one is designated)
+        // assume the default calendar (if one is designated)
         if (args && args.count &&
             ([[args[0] lowercaseString] isEqualToString:COMMANDS[CMD_HELP]] // help
              ||
@@ -375,7 +374,7 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
     if (args==nil || args.count==0) {
         return EXIT_NORMAL; // no error, only ran out of arguments
     }
-    NSString *reminder_id_str = [args pop];
+    NSString *reminder_id_str = [args shift];
     if ([[reminder_id_str lowercaseString] isEqualToString:@"notified"]) {
         _print(stderr, @"%@: have not written \"notified reminders\" code yet.\n", MYNAME );
         return EXIT_FATAL;
