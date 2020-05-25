@@ -21,5 +21,6 @@ void _print(FILE *file, NSString *format, ...);
 #define N NSLog([@"%s (%@:%d) " stringByAppendingString:format],__FUNCTION__,[[NSString stringWithUTF8String:__FILE__] lastPathComponent],__LINE__, ## __VA_ARGS__);
 // #define debug3(format, ...) fprintf (stderr, format, ## __VA_ARGS__)
 
+int snoozeSecondsStringToTimeInterval(NSString *snoozeSecondsString);
 
 #endif /* main_h */

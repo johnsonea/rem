@@ -78,6 +78,7 @@ static NSString *calendarTitle;
 static BOOL fetchCompleted=NO, fetchIncompleted=YES;
 static NSString *reminder_id_str = nil;
 static NSString *snoozeSecondsString = nil;
+static NSTimeInterval snoozeSeconds;
 static BOOL useAdvanced = NO;
 
 static EKEventStore *store;
@@ -303,6 +304,7 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     // fetch the snooze duration if we are snoozing
     if (command == CMD_SNOOZE) {
         snoozeSecondsString = [args shift];
+        snoozeSecondsStringToTimeInterval(snoozeSecondsString);
     }
     
     // remaining args, if any, are reminder ID's or -titles
@@ -1238,28 +1240,10 @@ static int uncompleteReminder(EKReminder *reminder, NSUInteger reminder_id)
     return EXIT_NORMAL;
 }
 
-/*!
-    @function snoozeReminder
-    @abstract delay the snooze on a not-completed reminder
-    @returns an exit status (0 for no error)
-    @param reminder
-        the reminder to snooze
-    @description change snooze on specified reminder to specific time
- */
-static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString *snoozeSecondsString)
-{
-    if (reminder.completed) {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
-        return EXIT_SNOOZE_ALREADYCOMPLETED;
-    }
-    if (!reminder.hasAlarms || reminder.alarms==nil || reminder.alarms.count==0) {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list % has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
-        return EXIT_SNOOZE_NOALARMS;
-    }
-    
-    // get the number of seconds
-    NSTimeInterval secs;
+
+int snoozeSecondsStringToTimeInterval(NSString *snoozeSecondsString) {
     BOOL hasAtSymbol;
+    NSTimeInterval secs;
     if ((hasAtSymbol=[snoozeSecondsString hasPrefix:SNOOZEDURATION_ATSYMBOL]) || [snoozeSecondsString hasPrefix:SNOOZEDURATION_AT]) {
         snoozeSecondsString = [snoozeSecondsString substringFromIndex:hasAtSymbol?[SNOOZEDURATION_ATSYMBOL length]:[SNOOZEDURATION_AT length]];
         snoozeSecondsString = [snoozeSecondsString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
@@ -1288,7 +1272,30 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
             return res; // error message will already have been printed
         secs = secsDouble; // [snoozeSecondsString integerValue];
     }
+    snoozeSeconds = secs;
+    return EXIT_NORMAL;
+}
 
+
+/*!
+    @function snoozeReminder
+    @abstract delay the snooze on a not-completed reminder
+    @returns an exit status (0 for no error)
+    @param reminder
+        the reminder to snooze
+    @description change snooze on specified reminder to specific time
+ */
+static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString *snoozeSecondsString)
+{
+    if (reminder.completed) {
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+        return EXIT_SNOOZE_ALREADYCOMPLETED;
+    }
+    if (!reminder.hasAlarms || reminder.alarms==nil || reminder.alarms.count==0) {
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list % has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+        return EXIT_SNOOZE_NOALARMS;
+    }
+    
     NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
     EKAlarm *alarmToSnooze;
     if ((extraneousAlarmsButWillNotDelete=[reminder snoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
@@ -1306,7 +1313,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         return EXIT_SNOOZE_NOTSNOOZING;
     }
     extraneousAlarmsButWillNotDelete = [alarmToSnooze arrayByRemovingFromArray:extraneousAlarmsButWillNotDelete];
-    EKAlarm *newAlarm = [alarmToSnooze duplicateAlarmChangingTimeToNowPlusSecs:secs];
+    EKAlarm *newAlarm = [alarmToSnooze duplicateAlarmChangingTimeToNowPlusSecs:snoozeSeconds];
     [reminder removeAlarm:alarmToSnooze];
     [reminder addAlarm:newAlarm];
     /* could delete extraneous alarms with:
