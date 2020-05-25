@@ -41,6 +41,7 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
 
 + (EKAlarm *)mostRecentAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
++ (NSArray<EKAlarm*> *)sortAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
 - (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms;
 
 - (EKAlarm *)duplicateAlarm;
