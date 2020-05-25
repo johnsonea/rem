@@ -23,6 +23,13 @@ NS_ASSUME_NONNULL_BEGIN
 +(NSString*)errorDomainNSStringRegex;
 +(void)setErrorDomainNSStringRegex:(NSString*_Nonnull)str;
 
+// Utility methods
+
+-(NSRegularExpression*_Nullable)regexWithOptions:(NSRegularExpressionOptions)options error:(NSError*_Nullable*_Nullable)errorRef;
+
+
+// Matching methods
+
 -(NSString*_Nullable)substringFirstMatchingRegexString:(NSString*_Nonnull)regexString options:(NSRegularExpressionOptions)options returningCaptureGroups:(NSDictionary<NSNumber*,NSString*>*_Nullable*_Nullable)captureGroupsDictRef leavingString:(NSString*_Nullable*_Nullable)remainderRef error:(NSError*_Nullable*_Nullable)errorRef;
 
 -(NSString*_Nullable)substringFirstMatchingRegexString:(NSString*_Nonnull)regexString options:(NSRegularExpressionOptions)options returningCaptureGroups:(NSDictionary<NSNumber*,NSString*>*_Nullable*_Nullable)captureGroupsDictRef leavingString:(NSString*_Nullable*_Nullable)remainderRef;
@@ -44,6 +51,22 @@ NS_ASSUME_NONNULL_BEGIN
 -(BOOL)matchesRegexString:(NSString*_Nonnull)regexString options:(NSRegularExpressionOptions)options;
 -(BOOL)matchesRegexString:(NSString*_Nonnull)regexString;
 -(BOOL)matchesRegexStringI:(NSString*_Nonnull)regexString;
+
+
+
+//Replace methods
+
+-(NSString*_Nullable)stringByReplacingMatchesOfRegex:(NSString*_Nonnull)regexString matchOptions:(NSRegularExpressionOptions)matchOptions range:(NSRange)range replacement:(NSString *)replacement replaceOptions:(NSMatchingOptions)replaceOptions error:(NSError*_Nullable*_Nullable)errorRef;
+
+-(NSString*_Nullable)stringByReplacingMatchesOfRegex:(NSString*_Nonnull)regexString matchOptions:(NSRegularExpressionOptions)matchOptions replacement:(NSString *)replacement error:(NSError*_Nullable*_Nullable)errorRef;
+-(NSString*_Nullable)stringByReplacingMatchesOfRegex:(NSString*_Nonnull)regexString with:(NSString *)replacement error:(NSError*_Nullable*_Nullable)errorRef;
+-(NSString*_Nullable)stringByReplacingMatchesOfRegexI:(NSString*_Nonnull)regexString with:(NSString *)replacement error:(NSError*_Nullable*_Nullable)errorRef;
+
+-(NSString*_Nullable)stringByReplacingMatchesOfRegex:(NSString*_Nonnull)regexString matchOptions:(NSRegularExpressionOptions)matchOptions replacement:(NSString *_Nullable)replacement;
+-(NSString*_Nullable)stringByReplacingMatchesOfRegex:(NSString*_Nonnull)regexString with:(NSString *)replacement;
+-(NSString*_Nullable)stringByReplacingMatchesOfRegexI:(NSString*_Nonnull)regexString with:(NSString *)replacement;
+
++(void)testStringRegex;
 
 @end
 

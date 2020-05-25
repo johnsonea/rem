@@ -1360,6 +1360,8 @@ int main(int argc, const char * argv[]) {
 
     @autoreleasepool {
         [NSString setErrorDomainNSStringRegex:MY_ERROR_DOMAIN];
+        
+        // [NSString testStringRegex]; exit(0);
 
         useAdvanced = [@"johnsone" isEqualToString:NSUserName()];
         
