@@ -750,6 +750,31 @@ int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
 }
 
 
+int stringToAbsoluteDate(NSString *str, NSString *label, NSDate **absoluteDateRef) {
+    NSError *error = nil;
+    NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeDate error:&error];
+    if (detector == nil) {
+        _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), localizedUnderlyingError(error));
+        return EXIT_INVARG_BADDATADETECTOR;
+    }
+    NSUInteger nMatches = [detector numberOfMatchesInString:str options:0 range:NSMakeRange(0, [str length])];
+    NSTextCheckingResult *firstMatch =  [detector firstMatchInString:str options:0 range:NSMakeRange(0, [str length])];
+    // NSLog(@"firstmatch: %@",firstMatch);
+    // NSLog(@"range of match: [%@,%@)",@(firstMatch.range.location),@(firstMatch.range.length));
+
+    if (nMatches == 0 || !firstMatch || [firstMatch resultType]!=NSTextCheckingTypeDate) {
+        _print(stderr, @"%@: unable to parse a %@date from \"%@\"\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str);
+        return EXIT_INVARG_BADDATE;
+    }
+
+    NSString *leftovers = [str stringByReplacingCharactersInRange:firstMatch.range withString:@" "];
+    if ([[leftovers stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] length] > 0) {
+        _print(stderr, @"%@: %@found more than just a date in \"%@\"\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
+        return EXIT_INVARG_BADDATE;
+    }
+    *absoluteDateRef = [firstMatch date];
+    return EXIT_NORMAL;
+}
 int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate **absoluteDateRef, NSTimeInterval *relativeOffsetRef) {
     BOOL hasNegative;
     if (absoluteDateRef == nil) {
@@ -781,29 +806,11 @@ int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate 
         *relativeOffsetRef = (NSTimeInterval)secs;
         *absoluteDateRef = nil; // shouldn't be necessary but just in case
     } else {
-        NSError *error = nil;
-        NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeDate error:&error];
-        if (detector == nil) {
-            _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), localizedUnderlyingError(error));
-            return EXIT_INVARG_BADDATADETECTOR;
-        }
-        NSUInteger nMatches = [detector numberOfMatchesInString:str options:0 range:NSMakeRange(0, [str length])];
-        NSTextCheckingResult *firstMatch =  [detector firstMatchInString:str options:0 range:NSMakeRange(0, [str length])];
-        // NSLog(@"firstmatch: %@",firstMatch);
-        // NSLog(@"range of match: [%@,%@)",@(firstMatch.range.location),@(firstMatch.range.length));
-
-        if (nMatches == 0 || !firstMatch || [firstMatch resultType]!=NSTextCheckingTypeDate) {
-            _print(stderr, @"%@: unable to parse a %@date from \"%@\"\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str);
-            return EXIT_INVARG_BADDATE;
-        }
-
-        NSString *leftovers = [str stringByReplacingCharactersInRange:firstMatch.range withString:@" "];
-        if ([[leftovers stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] length] > 0) {
-            _print(stderr, @"%@: %@found more than just a date in \"%@\"\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
-            return EXIT_INVARG_BADDATE;
-        }
-        
-        *absoluteDateRef = [firstMatch date];
+        int res = stringToAbsoluteDate(str, label, absoluteDateRef);
+        if (res != EXIT_NORMAL)
+            return res;
+        if (*absoluteDateRef == nil)
+            return EXIT_FATAL; // shouldn't happen but just in case
         *relativeOffsetRef = 0;
 
         // components->date: NSDate *dueDate = [[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents];
