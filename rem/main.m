@@ -33,6 +33,7 @@
     * rm: save reminder info so we can unrm
     * allow <item> to be "notified" which would look for the items currently showing in the Notification Center
     * allow <item> to be "lastcompleted" which would look for the most recently completed reminder in the given list -- this would facilitate "undone" to be able to rever the most recently completed reminder back to not completed
+    * remove popenv and regex perl testing code
  */
 
 

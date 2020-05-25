@@ -8,15 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		0C0C6DBA236E586E00E60A89 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C0C6DB9236E586E00E60A89 /* AppKit.framework */; };
-		0C0C6DBD236E733E00E60A89 /* NotificationCenter.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C0C6DBC236E733E00E60A89 /* NotificationCenter.m */; };
-		0C0C6DC7236E786600E60A89 /* SystemEventsAccess.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C0C6DC6236E786600E60A89 /* SystemEventsAccess.m */; };
-		0C0C6DCA236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C0C6DC9236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.m */; };
+		0C3D683C247BBE6E004D9B7B /* popenv.c in Sources */ = {isa = PBXBuildFile; fileRef = 0C3D683B247BBE6E004D9B7B /* popenv.c */; };
 		0C4F43C1238B2C510075C222 /* ScriptingBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C4F43C0238B2C510075C222 /* ScriptingBridge.framework */; };
 		0C4F43C3238B757E0075C222 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C4F43C2238B757E0075C222 /* CoreLocation.framework */; };
 		0C6441CA23690DF800F3366A /* EKAlarm+stringWith+MutableAlarm.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C6441C923690DF800F3366A /* EKAlarm+stringWith+MutableAlarm.m */; };
 		0C6441CD2369217200F3366A /* EKEventStore+Synchronous.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C6441CC2369217200F3366A /* EKEventStore+Synchronous.m */; };
 		0C6441D12369473E00F3366A /* EKReminder+Snoozing.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C6441D02369473E00F3366A /* EKReminder+Snoozing.m */; };
-		0C9A9A0024793C930007EAC7 /* popenv.c in Sources */ = {isa = PBXBuildFile; fileRef = 0C9A99FE24793C930007EAC7 /* popenv.c */; };
 		0CD2FF00238DB04B0007EE07 /* NSObject+performSelectorSafely.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CD2FEFF238DB04B0007EE07 /* NSObject+performSelectorSafely.m */; };
 		0CD8D39C236BA77900C10AE9 /* NSMutableArray+Queue.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CD8D39B236BA77900C10AE9 /* NSMutableArray+Queue.m */; };
 		0CD989DE245B7C8100897B0A /* EKEventStore+Utilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0CD989DD245B7C8100897B0A /* EKEventStore+Utilities.m */; };
@@ -42,13 +39,8 @@
 
 /* Begin PBXFileReference section */
 		0C0C6DB9236E586E00E60A89 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
-		0C0C6DBB236E733E00E60A89 /* NotificationCenter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NotificationCenter.h; sourceTree = "<group>"; };
-		0C0C6DBC236E733E00E60A89 /* NotificationCenter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NotificationCenter.m; sourceTree = "<group>"; };
-		0C0C6DC1236E77DA00E60A89 /* SystemEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemEvents.h; sourceTree = "<group>"; };
-		0C0C6DC5236E786600E60A89 /* SystemEventsAccess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SystemEventsAccess.h; sourceTree = "<group>"; };
-		0C0C6DC6236E786600E60A89 /* SystemEventsAccess.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SystemEventsAccess.m; sourceTree = "<group>"; };
-		0C0C6DC8236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SBElementArray+WithBundleIdentifier.h"; sourceTree = "<group>"; };
-		0C0C6DC9236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "SBElementArray+WithBundleIdentifier.m"; sourceTree = "<group>"; };
+		0C3D683A247BBE6E004D9B7B /* popenv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = popenv.h; path = ../../../../bin/popenv.h; sourceTree = "<group>"; };
+		0C3D683B247BBE6E004D9B7B /* popenv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = popenv.c; path = ../../../../bin/popenv.c; sourceTree = "<group>"; };
 		0C4F43BF238B2B590075C222 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
 		0C4F43C0238B2C510075C222 /* ScriptingBridge.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScriptingBridge.framework; path = System/Library/Frameworks/ScriptingBridge.framework; sourceTree = SDKROOT; };
 		0C4F43C2238B757E0075C222 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
@@ -59,8 +51,6 @@
 		0C6441CE236923B500F3366A /* errors.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = errors.h; sourceTree = "<group>"; };
 		0C6441CF2369473E00F3366A /* EKReminder+Snoozing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EKReminder+Snoozing.h"; sourceTree = "<group>"; };
 		0C6441D02369473E00F3366A /* EKReminder+Snoozing.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "EKReminder+Snoozing.m"; sourceTree = "<group>"; };
-		0C9A99FE24793C930007EAC7 /* popenv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = popenv.c; path = ../../../../bin/popenv.c; sourceTree = "<group>"; };
-		0C9A99FF24793C930007EAC7 /* popenv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = popenv.h; path = ../../../../bin/popenv.h; sourceTree = "<group>"; };
 		0CD2FEFE238DB04B0007EE07 /* NSObject+performSelectorSafely.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSObject+performSelectorSafely.h"; sourceTree = "<group>"; };
 		0CD2FEFF238DB04B0007EE07 /* NSObject+performSelectorSafely.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSObject+performSelectorSafely.m"; sourceTree = "<group>"; };
 		0CD8D39A236BA77900C10AE9 /* NSMutableArray+Queue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSMutableArray+Queue.h"; sourceTree = "<group>"; };
@@ -95,24 +85,11 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0C0C6DC2236E77E100E60A89 /* SystemEvents */ = {
+		0C3D6839247BBE02004D9B7B /* testing */ = {
 			isa = PBXGroup;
 			children = (
-				0C0C6DC1236E77DA00E60A89 /* SystemEvents.h */,
-				0C0C6DC5236E786600E60A89 /* SystemEventsAccess.h */,
-				0C0C6DC6236E786600E60A89 /* SystemEventsAccess.m */,
-				0C0C6DC8236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.h */,
-				0C0C6DC9236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.m */,
-			);
-			name = SystemEvents;
-			path = rem;
-			sourceTree = "<group>";
-		};
-		0C9A99FD24793C7B0007EAC7 /* testing */ = {
-			isa = PBXGroup;
-			children = (
-				0C9A99FE24793C930007EAC7 /* popenv.c */,
-				0C9A99FF24793C930007EAC7 /* popenv.h */,
+				0C3D683B247BBE6E004D9B7B /* popenv.c */,
+				0C3D683A247BBE6E004D9B7B /* popenv.h */,
 			);
 			path = testing;
 			sourceTree = "<group>";
@@ -120,10 +97,9 @@
 		E5C96A2B16261A4A00611642 = {
 			isa = PBXGroup;
 			children = (
-				0C9A99FD24793C7B0007EAC7 /* testing */,
+				0C3D6839247BBE02004D9B7B /* testing */,
 				E5467EA1162F3AFB00676892 /* LICENSE */,
 				E5467EA3162F3CD600676892 /* README.asciidoc */,
-				0C0C6DC2236E77E100E60A89 /* SystemEvents */,
 				E5C96A3C16261A4A00611642 /* rem */,
 				E5C96A3916261A4A00611642 /* Frameworks */,
 				E5C96A3716261A4A00611642 /* Products */,
@@ -155,8 +131,6 @@
 			children = (
 				0C4F43BF238B2B590075C222 /* main.h */,
 				E5C96A3D16261A4A00611642 /* main.m */,
-				0C0C6DBB236E733E00E60A89 /* NotificationCenter.h */,
-				0C0C6DBC236E733E00E60A89 /* NotificationCenter.m */,
 				0CD8D39A236BA77900C10AE9 /* NSMutableArray+Queue.h */,
 				0CD8D39B236BA77900C10AE9 /* NSMutableArray+Queue.m */,
 				0C6441CB2369217200F3366A /* EKEventStore+Synchronous.h */,
@@ -238,17 +212,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C3D683C247BBE6E004D9B7B /* popenv.c in Sources */,
 				0C6441D12369473E00F3366A /* EKReminder+Snoozing.m in Sources */,
 				0CD989DE245B7C8100897B0A /* EKEventStore+Utilities.m in Sources */,
 				0C6441CD2369217200F3366A /* EKEventStore+Synchronous.m in Sources */,
-				0C0C6DC7236E786600E60A89 /* SystemEventsAccess.m in Sources */,
 				0CD2FF00238DB04B0007EE07 /* NSObject+performSelectorSafely.m in Sources */,
 				0CD8D39C236BA77900C10AE9 /* NSMutableArray+Queue.m in Sources */,
 				0CEBAF482398A634005DEEF2 /* NSString+regex.m in Sources */,
-				0C0C6DBD236E733E00E60A89 /* NotificationCenter.m in Sources */,
 				0C6441CA23690DF800F3366A /* EKAlarm+stringWith+MutableAlarm.m in Sources */,
-				0C9A9A0024793C930007EAC7 /* popenv.c in Sources */,
-				0C0C6DCA236E7BF400E60A89 /* SBElementArray+WithBundleIdentifier.m in Sources */,
 				E5C96A3E16261A4A00611642 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
