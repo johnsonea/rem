@@ -28,6 +28,11 @@
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
     * undone: save info on now-uncompleted reminder so we can "undo" it and make it completed again
     * rm: save reminder info so we can unrm
+    * snooze: if snooze duration starts with "@" or "at" -- either with optional whitespace after -- then treat it as a time instead of a duration.  If no date is given, treat the time as today (if after the current time) or tomorrow (if before).  If no time is given, snooze until the current time on that date.  What to do if the date, or date and time, is before now? throw error or just warn and do it (if the reminder will immediately re-pop-up in Notification Center, then just warn and do it)?
+    * snooze: allow additional snooze durations to be interspersed between items, e.g., "rem snooze Reminders 5m <items...> --snooze=10m <items...>" (or perhaps "--durations=10m"?)
+    * snooze: allow random snooze times, e.g., 5-60m would be uniformly distributed between 5m and 60m
+    * allow <item> to be "notified" which would look for the items currently showing in the Notification Center
+    * allow <item> to be "lastcompleted" which would look for the most recently completed reminder in the given list -- this would facilitate "undone" to be able to rever the most recently completed reminder back to not completed
  */
 
 
