@@ -9,6 +9,7 @@
 #include <math.h>
 #import "EKAlarm+stringWith+MutableAlarm.h"
 #import "NSObject+performSelectorSafely.h"
+#import "NSString+regex.h"
 #import "main.h"
 
 @implementation EKMutableAlarm
@@ -114,8 +115,47 @@
 //    // ((EKMutableAlarm*)self).sharedUID = newSharedUID;
 //}
 
+#define GEOLOC_DEBUG 0
 NSString *structuredLocationString(EKStructuredLocation *loc) {
-    return loc.description ? loc.description : [NSString stringWithFormat:@"%@",loc];
+    if (GEOLOC_DEBUG) NSLog(@"loc 1");
+    if (GEOLOC_DEBUG) NSLog(@"loc 2, loc.description=\"%@\"",loc.description);
+    if (GEOLOC_DEBUG) NSLog(@"loc 3a");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3b loc.title=%@",loc.title);
+    if (GEOLOC_DEBUG) NSLog(@"loc 3c");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3d, loc.geoLocation=%@",loc.geoLocation);
+    if (GEOLOC_DEBUG) NSLog(@"loc 3e");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3f, loc.geoLocation.coordinate=%ld",loc.geoLocation.coordinate);
+    if (GEOLOC_DEBUG) NSLog(@"loc 3g");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3h, loc.geoLocation.coordinate=(%@,%@)",@(loc.geoLocation.coordinate.latitude),@(loc.geoLocation.coordinate.longitude));
+    if (GEOLOC_DEBUG) NSLog(@"loc 3i");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3j, loc.geoLocation.altitude=%@ m",@(loc.geoLocation.altitude));
+    if (GEOLOC_DEBUG) NSLog(@"loc 3k");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3l, loc.geoLocation.horizontalAccuracy=%@ m",@(loc.geoLocation.horizontalAccuracy));
+    if (GEOLOC_DEBUG) NSLog(@"loc 3m");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3n, loc.geoLocation.verticalAccuracy=%@ m",@(loc.geoLocation.verticalAccuracy));
+    if (GEOLOC_DEBUG) NSLog(@"loc 3o");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3p, loc.geoLocation.timestamp=%@",loc.geoLocation.timestamp);
+    if (GEOLOC_DEBUG) NSLog(@"loc 3q");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3r, loc.geoLocation.speed=%@ m/s",@(loc.geoLocation.speed));
+    if (GEOLOC_DEBUG) NSLog(@"loc 3s");
+    if (GEOLOC_DEBUG) NSLog(@"loc 3t, loc.geoLocation.course=%@ deg",@(loc.geoLocation.course));
+    if (GEOLOC_DEBUG) NSLog(@"loc 3u");
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wundeclared-selector"
+    if (GEOLOC_DEBUG) NSLog(@"loc 3v, loc.geoURLString=%@",[loc respondsToSelector:@selector(geoURLString)] ? [loc performSelector:@selector(geoURLString)] : @"<not implemented>");
+    #pragma clang diagnostic pop
+    if (GEOLOC_DEBUG) NSLog(@"loc 3w");
+    if (GEOLOC_DEBUG) NSLog(@"loc 4, loc=\"%@\"",loc);
+    if (GEOLOC_DEBUG) NSLog(@"loc 5");
+    NSString *str = loc.description ? loc.description : [NSString stringWithFormat:@"%@",loc];
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wundeclared-selector"
+    if ([loc respondsToSelector:@selector(geoURLString)]) {
+        NSString *geoURLString = [loc performSelector:@selector(geoURLString)];
+        str = [str stringByReplacingMatchesOfRegex:@"(geo\\s*=\\s*)\\(null\\)" with:[@"$1" stringByAppendingString:[NSRegularExpression escapedTemplateForString:geoURLString]]];
+     }
+    #pragma clang diagnostic pop
+    return str;
 }
 
 // note: cannot call this "proximityString" because self.proximity calls "proximityString" and this would run into an infinite recursion
