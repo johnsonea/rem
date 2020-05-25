@@ -24,7 +24,6 @@
 
 /*
  TO DO:
-    * snooze: if snooze duration starts with "@" or "at" -- either with optional whitespace after -- then treat it as a time instead of a duration.  If no date is given, treat the time as today (if after the current time) or tomorrow (if before).  If no time is given, snooze until the current time on that date.  What to do if the date, or date and time, is before now? throw error or just warn and do it (if the reminder will immediately re-pop-up in Notification Center, then just warn and do it)?
     * snooze: allow random snooze times, e.g., 5-60m would be uniformly distributed between 5m and 60m
     * snooze: allow additional snooze durations to be interspersed between items, e.g., "rem snooze Reminders 5m <items...> --snooze=10m <items...>" (or perhaps "--durations=10m"?)
     * allow <item> to be "lastcompleted" which would look for the most recently completed reminder in the given list -- this would facilitate "undone" to be able to rever the most recently completed reminder back to not completed
@@ -149,8 +148,8 @@ static void _usage()
     _print(stdout, @"\t%@ %@ <list>%@ <item1> [<item2> ...]\n\t\tMark completed reminder(s) as incomplete\n", MYNAME, COMMANDS[CMD_UNDONE], COMPLETED_SUFFIX);
     _print(stdout, @"\t%@ %@ [<list>]\n\t\tList reminders with details (default is all lists)\n", MYNAME, COMMANDS[CMD_EVERY]);
     _print(stdout, @"\t%@ %@ [<list>]\n\t\tList ignored reminders [that have alarms all in the past] (default is all lists)\n", MYNAME, COMMANDS[CMD_IGNORED]);
-    _print(stdout, @"\t%@ %@ <list> <seconds> <item1> [<item2> ...]\n\t\tSnooze reminder until <seconds> from now\n", MYNAME, COMMANDS[CMD_SNOOZE]);
-    _print(stdout, @"\t\t==> to snooze default-list reminders: %@ <seconds> <item1> [<item2> ...]\n",COMMANDS[CMD_SNOOZE]);
+    _print(stdout, @"\t%@ %@ <list> (<duration> | @<dateAndTime>) <item1> [<item2> ...]\n\t\tSnooze reminder for a duration or until the given date/time\n\t\t<duration> is number of seconds or like 5d10h20m35s or 5:10:20:35\n\t\t<dateAndTime> may be a  date (noon) or time (today) or both, or relative (e.g., \"tomorrow\")\n", MYNAME, COMMANDS[CMD_SNOOZE]);
+    _print(stdout, @"\t\t==> to snooze default-list reminders: %@ (<duration> | @<dateAndTime>) <item1> [<item2> ...]\n",COMMANDS[CMD_SNOOZE]);
     _print(stdout, @"\t%@ %@\n\t\tShow this text\n", MYNAME, COMMANDS[CMD_HELP]);
     _print(stdout, @"\t%@ %@\n\t\tShow version information\n", MYNAME, COMMANDS[CMD_VERSION]);
     _print(stdout, @"\tNote: commands can be like \"%@\" or \"%@\" or \"%@\".\n", COMMANDS[CMD_LS], [SWITCH_LONGDASH stringByAppendingString:COMMANDS[CMD_LS]], [SWITCH_SHORTDASH stringByAppendingString:[COMMANDS[CMD_LS] substringToIndex:1]]);
@@ -1259,16 +1258,36 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     }
     
     // get the number of seconds
-    double secsDouble = 0;
-    int res = parseTimeSeparatedByDHMS(snoozeSecondsString,&secsDouble);
-    if (res == EXIT_CLEAN)
-        res = parseTimeSeparatedByColons(snoozeSecondsString,&secsDouble);
-    if (res == EXIT_CLEAN) { // couldn't match either pattern
-        _print(stderr, @"%@: bad %@ duration \"%@\".\n", MYNAME, COMMANDS[CMD_SNOOZE], snoozeSecondsString);
-        return EXIT_INVARG_BADSNOOZE;
-    } else if (res != EXIT_NORMAL)
-        return res; // error message will already have been printed
-    NSTimeInterval secs = secsDouble; // [snoozeSecondsString integerValue];
+    NSTimeInterval secs;
+    BOOL hasAtSymbol;
+    if ((hasAtSymbol=[snoozeSecondsString hasPrefix:SNOOZEDURATION_ATSYMBOL]) || [snoozeSecondsString hasPrefix:SNOOZEDURATION_AT]) {
+        snoozeSecondsString = [snoozeSecondsString substringFromIndex:hasAtSymbol?[SNOOZEDURATION_ATSYMBOL length]:[SNOOZEDURATION_AT length]];
+        snoozeSecondsString = [snoozeSecondsString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        NSDate *absoluteDate;
+        int res = stringToAbsoluteDate(snoozeSecondsString, COMMANDS[CMD_SNOOZE], &absoluteDate);
+        if (res != EXIT_NORMAL)
+            return res; // error message was already printed in stringToAbsoluteDate
+        secs = [absoluteDate timeIntervalSinceNow];
+        if (secs < 0) {
+            NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+            dateFormatter.dateStyle = NSDateFormatterShortStyle;
+            dateFormatter.timeStyle = NSDateFormatterLongStyle;
+            dateFormatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+            _print(stderr, @"%@: %@ date \"%@\" (parsed as %@) is in the past.\n", MYNAME, COMMANDS[CMD_SNOOZE], snoozeSecondsString, [dateFormatter stringFromDate:absoluteDate]);
+            return EXIT_INVARG_BADSNOOZE;
+        }
+    } else {
+        double secsDouble = 0;
+        int res = parseTimeSeparatedByDHMS(snoozeSecondsString,&secsDouble);
+        if (res == EXIT_CLEAN)
+            res = parseTimeSeparatedByColons(snoozeSecondsString,&secsDouble);
+        if (res == EXIT_CLEAN) { // couldn't match either pattern
+            _print(stderr, @"%@: bad %@ duration \"%@\".\n", MYNAME, COMMANDS[CMD_SNOOZE], snoozeSecondsString);
+            return EXIT_INVARG_BADSNOOZE;
+        } else if (res != EXIT_NORMAL)
+            return res; // error message will already have been printed
+        secs = secsDouble; // [snoozeSecondsString integerValue];
+    }
 
     NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
     EKAlarm *alarmToSnooze;
