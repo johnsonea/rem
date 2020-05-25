@@ -40,6 +40,7 @@
 #define MYNAME @"rem"
 #define SHOW_NEW_DETAILS 1
 #define RM_ASK_BEFORE 1
+#define SORT_ALARMS_BY_TIME YES
 
 NSString *VERSION_STRING = @"0.02eaj";
 NSString *REMINDER_TITLE_PREFIX = @"--";
@@ -618,9 +619,10 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
                 _print(stdout, @"%@Recurrence Rule %@: %@\n", indent, @(i+1), reminder.recurrenceRules[i].description); // NOTE: .description is decent though could make it more humanly readable
             }
         }
-        if (reminder.hasAlarms && reminder.alarms) {
-            for (NSUInteger i=0; i<reminder.alarms.count; i++) {
-                _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [reminder.alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime forReminder:reminder]);
+        if (reminder.hasAlarms && reminder.alarms && reminder.alarms.count) {
+            NSArray<EKAlarm*> *alarms = SORT_ALARMS_BY_TIME ? [EKAlarm sortAlarmsFromArray:reminder.alarms forReminder:reminder] : reminder.alarms;
+            for (NSUInteger i=0; i<alarms.count; i++) {
+                _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime forReminder:reminder]);
             }
         }
         if (SHOW_UNDOCUMENTED) { // undocumented properties

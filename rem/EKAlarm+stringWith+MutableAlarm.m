@@ -118,7 +118,7 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     return loc.description ? loc.description : [NSString stringWithFormat:@"%@",loc];
 }
 
-// note: cannot call this proximityString because self.proximity calls proximityString and this would run into an infinite recursion
+// note: cannot call this "proximityString" because self.proximity calls "proximityString" and this would run into an infinite recursion
 - (NSString *)proximityStr {
     return
     self.proximity == EKAlarmProximityNone ? @"" :
@@ -236,6 +236,22 @@ static BOOL showWarning = YES;
     }
     return mostRecent;
 }
++ (NSArray<EKAlarm*> *)sortAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    return [alarms sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+        NSTimeInterval A = [(EKAlarm*)a timeIntervalSinceNowForReminder:reminder];
+        NSTimeInterval B = [(EKAlarm*)b timeIntervalSinceNowForReminder:reminder];
+        // will be NAN if there is no identifiable date
+        // let's put NAN's after real dates
+        return (isnan(A)&&isnan(B))||A==B ? NSOrderedSame // need the isnan checks because NAN is never equal to NAN
+            : isnan(A) ? NSOrderedDescending
+            : isnan(B) ? NSOrderedAscending
+            : A>B ? NSOrderedDescending
+            : NSOrderedAscending;
+    }];
+}
+
+
+
 - (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms {
     if (!alarms || !alarms.count) return @[]; // empty array
      NSMutableArray *alarmsMutable = [NSMutableArray arrayWithArray:alarms];
