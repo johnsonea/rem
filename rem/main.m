@@ -58,6 +58,10 @@ NSString *COMPLETED_SUFFIX = @"-completed";
 NSString *ALL_SUFFIX = @"-ALL";
 NSString *SNOOZEDURATION_ATSYMBOL = @"@";
 NSString *SNOOZEDURATION_AT = @"at";
+NSDictionary<NSString*,NSString*> *misspellings;
+#define MISSPELLINGS @{\
+    @"tommorow": @"tomorrow", \
+};
 
 #define COMMANDS @[ @"ls", @"add", @"rm", @"cat", @"done", @"undone", @"every", @"ignored", @"snooze", @"help", @"version" ]
 typedef enum _CommandType {
@@ -758,12 +762,10 @@ int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
 
 int stringToAbsoluteDate(NSString *str, NSString *label, NSDate **absoluteDateRef) {
     NSError *error = nil;
-    /*
-    NSLog(@"str = %@");
-    str = [str stringByReplacingMatchesOfRegex:@"\b([tT])[oO][mM][mM][oO][rR][oO][wW]\b" with:@"$1omorrow"];
-    NSLog(@"str = %@");
-    exit(0);
-    */
+    // fix some common misspellings
+    for (NSString* incorrectSpelling in misspellings)
+        str = [str stringByReplacingMatchesOfRegexI:[NSString stringWithFormat:@"\\b%@\\b", incorrectSpelling] with:misspellings[incorrectSpelling]];
+    // now detect a date
     NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeDate error:&error];
     if (detector == nil) {
         _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), localizedUnderlyingError(error));
@@ -786,6 +788,7 @@ int stringToAbsoluteDate(NSString *str, NSString *label, NSDate **absoluteDateRe
         NSLog(@"err");
         return EXIT_INVARG_BADDATE;
     }
+    
     *absoluteDateRef = [firstMatch date];
     return EXIT_NORMAL;
 }
@@ -1410,6 +1413,7 @@ int main(int argc, const char * argv[]) {
 
     @autoreleasepool {
         [NSString setErrorDomainNSStringRegex:MY_ERROR_DOMAIN];
+        misspellings = MISSPELLINGS;
         
         // [NSString testStringRegex]; exit(0);
 
