@@ -24,9 +24,12 @@
 
 /*
  TO DO:
+    * snooze: why is the format "snoozed '@10am tomorrow' --/review.STC-19" not working ("rem: Error unknown command @10am tomorrow")?
     * snooze: allow random snooze times, e.g., 5-60m would be uniformly distributed between 5m and 60m
     * snooze: allow additional snooze durations to be interspersed between items, e.g., "rem snooze Reminders 5m <items...> --snooze=10m <items...>" (or perhaps "--durations=10m"?)
     * allow <item> to be "lastcompleted" which would look for the most recently completed reminder in the given list -- this would facilitate "undone" to be able to rever the most recently completed reminder back to not completed
+    * snooze: currently only reading reminders that are alerted, i.e., the latest alarm is in the past; if this gives no reminders, perhaps relax and read reminders that whose first alarm is in the past but last alarm is in the future (which would allow adjusting the snooze time even if not alerted)
+    * if the <list> doesn't exist but a similar list exists with diferent capitalization, change the error message to suggest the correct capitalization. Could also do the same if there is a slight misspelling (a letter omitted, a letter added, two letters swapped [which I often do when typing quickly]).
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
     * undone: save info on now-uncompleted reminder so we can "undo" it and make it completed again
     * rm: save reminder info so we can unrm
@@ -304,7 +307,9 @@ static int parseArguments(NSMutableArray **itemArgsRef)
     // fetch the snooze duration if we are snoozing
     if (command == CMD_SNOOZE) {
         snoozeSecondsString = [args shift];
-        snoozeSecondsStringToTimeInterval(snoozeSecondsString);
+        int ret = snoozeSecondsStringToTimeInterval(snoozeSecondsString);
+        if (ret != EXIT_NORMAL)
+            return ret;
     }
     
     // remaining args, if any, are reminder ID's or -titles
@@ -753,6 +758,12 @@ int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
 
 int stringToAbsoluteDate(NSString *str, NSString *label, NSDate **absoluteDateRef) {
     NSError *error = nil;
+    /*
+    NSLog(@"str = %@");
+    str = [str stringByReplacingMatchesOfRegex:@"\b([tT])[oO][mM][mM][oO][rR][oO][wW]\b" with:@"$1omorrow"];
+    NSLog(@"str = %@");
+    exit(0);
+    */
     NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:(NSTextCheckingTypes)NSTextCheckingTypeDate error:&error];
     if (detector == nil) {
         _print(stderr, @"%@: unable to (allocate a DataDetector to) parse a %@date from \"%@\": #%@ %@\n", MYNAME, label?[label stringByAppendingString:@" "]:@"", str, @(error.code), localizedUnderlyingError(error));
@@ -769,8 +780,10 @@ int stringToAbsoluteDate(NSString *str, NSString *label, NSDate **absoluteDateRe
     }
 
     NSString *leftovers = [str stringByReplacingCharactersInRange:firstMatch.range withString:@" "];
-    if ([[leftovers stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] length] > 0) {
-        _print(stderr, @"%@: %@found more than just a date in \"%@\"\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
+    NSString *trimmedLeftovers = [leftovers stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if ([trimmedLeftovers length] > 0) {
+        _print(stderr, @"%@: %@found more than just a date in \"%@\", leaving \"%@\"\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str, trimmedLeftovers);
+        NSLog(@"err");
         return EXIT_INVARG_BADDATE;
     }
     *absoluteDateRef = [firstMatch date];
