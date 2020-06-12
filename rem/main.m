@@ -625,7 +625,27 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         if (reminder.hasRecurrenceRules && reminder.recurrenceRules) {
             #pragma clang diagnostic push
             #pragma clang diagnostic ignored "-Wundeclared-selector"
-            if ([reminder respondsToSelector:@selector(humanReadableRecurrenceDescription)]) _print(stdout, @"%@Recurrence Description: %@\n", indent, [reminder performSelector:@selector(humanReadableRecurrenceDescription)]);
+            if (0 /* prints roughly the same as reminder.recurrenceRules[0].description, so this is extraneous */ && [reminder respondsToSelector:@selector(recurrenceRuleString)]) {
+                _print(stdout, @"%@Recurrence Description (recurrenceRuleString): %@\n", indent, [reminder performSelector:@selector(recurrenceRuleString)]);
+            }
+            NSOperatingSystemVersion osVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
+            if (osVersion.majorVersion != 10 || osVersion.minorVersion > 15) {
+                /* in Mojave, [reminder humanReadableRecurrenceDescription] returns something like:
+                     Recurrence Description: Monthly
+                   in Catalina [reminder humanReadableRecurrenceDescription] (on some reminders):
+                    Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '*** -[__NSCFCalendar components:fromDate:]: date cannot be nil'
+                    *** First throw call stack:
+                     0   CoreFoundation                      0x00007fff33703be7 __exceptionPreprocess + 250
+                     1   libobjc.A.dylib                     0x00007fff6c3425bf objc_exception_throw + 48
+                     2   CoreFoundation                      0x00007fff336a7827 -[__NSCFCalendar components:fromDate:] + 1500
+                     3   CoreFoundation                      0x00007fff336a71d2 -[_NSCopyOnWriteCalendarWrapper components:fromDate:] + 78
+                     4   EventKit                            0x00007fff359dfcb7 -[EKRecurrenceRule humanReadableDescriptionWithStartDate:] + 143
+                     5   EventKit                            0x00007fff359dfbf8 -[EKReminder humanReadableRecurrenceDescription] + 82
+                 */
+                NSLog(@"Warning: [reminder humanReadableRecurrenceDescription] dies in 10.15.x Catalina; do not know about %@.%@.%@",@(osVersion.majorVersion),@(osVersion.minorVersion),@(osVersion.patchVersion));
+            }
+            if (osVersion.majorVersion!=10&&osVersion.minorVersion!=15 && [reminder respondsToSelector:@selector(humanReadableRecurrenceDescription)])
+                _print(stdout, @"%@Recurrence Description: %@\n", indent, [reminder performSelector:@selector(humanReadableRecurrenceDescription)]);
             #pragma clang diagnostic pop
             for (NSUInteger i=0; i<reminder.recurrenceRules.count; i++) {
                 _print(stdout, @"%@Recurrence Rule %@: %@\n", indent, @(i+1), reminder.recurrenceRules[i].description); // NOTE: .description is decent though could make it more humanly readable
