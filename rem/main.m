@@ -24,17 +24,15 @@
 
 /*
  TO DO:
-    * snooze: why is the format "snoozed '@10am tomorrow' --/review.STC-19" not working ("rem: Error unknown command @10am tomorrow")?
+    * snooze: why is the format "snooze '@10am tomorrow' --/review.STC-19" not working ("rem: Error unknown command @10am tomorrow")?
     * snooze: allow random snooze times, e.g., 5-60m would be uniformly distributed between 5m and 60m
     * snooze: allow additional snooze durations to be interspersed between items, e.g., "rem snooze Reminders 5m <items...> --snooze=10m <items...>" (or perhaps "--durations=10m"?)
-    * allow <item> to be "lastcompleted" which would look for the most recently completed reminder in the given list -- this would facilitate "undone" to be able to rever the most recently completed reminder back to not completed
     * snooze: currently only reading reminders that are alerted, i.e., the latest alarm is in the past; if this gives no reminders, perhaps relax and read reminders that whose first alarm is in the past but last alarm is in the future (which would allow adjusting the snooze time even if not alerted)
     * if the <list> doesn't exist but a similar list exists with diferent capitalization, change the error message to suggest the correct capitalization. Could also do the same if there is a slight misspelling (a letter omitted, a letter added, two letters swapped [which I often do when typing quickly]).
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
     * undone: save info on now-uncompleted reminder so we can "undo" it and make it completed again
     * rm: save reminder info so we can unrm
     * allow <item> to be "notified" which would look for the items currently showing in the Notification Center
-    * allow <item> to be "lastcompleted" which would look for the most recently completed reminder in the given list -- this would facilitate "undone" to be able to rever the most recently completed reminder back to not completed
     * remove popenv and regex perl testing code
  */
 
@@ -45,7 +43,7 @@
 #define RM_ASK_BEFORE 1
 #define SORT_ALARMS_BY_TIME YES
 
-NSString *VERSION_STRING = @"0.02eaj";
+NSString *VERSION_STRING = @"0.02eaj2";
 NSString *REMINDER_TITLE_PREFIX = @"--";
 NSString *REMINDER_TITLE_REGEXPREF = @"/";
 NSString *PLUS_PREFIX = @"+";
@@ -161,7 +159,7 @@ static void _usage()
     _print(stdout, @"\t%@ %@\n\t\tShow this text\n", MYNAME, COMMANDS[CMD_HELP]);
     _print(stdout, @"\t%@ %@\n\t\tShow version information\n", MYNAME, COMMANDS[CMD_VERSION]);
     _print(stdout, @"\tNote: commands can be like \"%@\" or \"%@\" or \"%@\".\n", COMMANDS[CMD_LS], [SWITCH_LONGDASH stringByAppendingString:COMMANDS[CMD_LS]], [SWITCH_SHORTDASH stringByAppendingString:[COMMANDS[CMD_LS] substringToIndex:1]]);
-    _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a title regular expression (no trailing \"/\").\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF);
+    _print(stdout, @"\tNote: <item> is an integer,\n\t             or \"%@\" followed by a reminder title,\n\t             or \"%@%@\" followed by a title regular expression (no trailing \"/\"),\n\t             or \"%@\" for the most recently completed.\n",REMINDER_TITLE_PREFIX,REMINDER_TITLE_PREFIX,REMINDER_TITLE_REGEXPREF,ITEM_LASTCOMPLETED);
     _print(stdout, @"\tNote: <list> may be an empty string \"\" or \"*\" to denote searching all lists\n\t        (invalid if reminder specified by integer index, valid with title/regex).\n");
     _print(stdout, @"\t      Normally, only uncompleted reminders are read (completed ones ignored).\n");
     _print(stdout, @"\t      If <list> ends with \"%@\", or if the command is \"%@\", then\n\t        only completed reminders are read.\n", COMPLETED_SUFFIX, COMMANDS[CMD_UNDONE]);
@@ -440,12 +438,29 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
         _print(stderr, @"%@: have not written \"%@ reminders\" code yet.\n", MYNAME, ITEM_NOTIFIED);
         return EXIT_FATAL;
     } else if ([[reminder_id_str lowercaseString] isEqualToString:ITEM_LASTCOMPLETED]) {
-        _print(stderr, @"%@: have not written \"%@ reminders\" code yet.\n", MYNAME, ITEM_LASTCOMPLETED);
-        return EXIT_FATAL;
+        NSArray *reminders = calendarTitle ? [calendars objectForKey:calendarTitle] : allReminders;
+        NSArray *sortedCompletedReminders = [EKReminder extractSortedCompleted:reminders];
+        if (sortedCompletedReminders.count < 1) {
+            _print(stderr, @"%@: Error - there are no completed reminders%@\n", MYNAME, calendarTitle ? [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle] : @"");
+            return EXIT_INVARG_EMPTYCALENDAR;
+        }
+        _print(stderr, @"%@: found %@ completed reminders%@\n", MYNAME, @(sortedCompletedReminders.count), calendarTitle ? [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle] : @"");
+        NSLog(@"before");
+        *reminderRef = [sortedCompletedReminders lastObject];
+        NSLog(@"after");
+        NSDictionary *cals = calendarTitle ? @{calendarTitle:reminders} : calendars;
+        for (NSString *calendarTitle in cals) { // previously had "for (calendarTitle in cals) {" -- using the global value -- because the global calendarTitle previously had to match reminder.calendar.title for at least one of the functions remove*, show*, complete*, or snooze* (I don't remember which ones) in handleReminders
+            reminders = calendars[calendarTitle];
+            *reminder_id_ref = [reminders indexOfObject:*reminderRef];
+            if (*reminder_id_ref == NSNotFound)
+                *reminder_id_ref = 0;
+            else
+                break;
+        }
     } else if ([reminder_id_str hasPrefix:REMINDER_TITLE_PREFIX]) {
         NSArray *reminders = calendarTitle ? [calendars objectForKey:calendarTitle] : allReminders;
         if (reminders.count < 1) {
-            _print(stderr, @"%@: Error - there are no reminders\n", MYNAME, calendarTitle ? [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle] : @"");
+            _print(stderr, @"%@: Error - there are no reminders%@\n", MYNAME, calendarTitle ? [NSString stringWithFormat:@" in Reminder List: %@",calendarTitle] : @"");
             return EXIT_INVARG_EMPTYCALENDAR;
         }
         // try to find the reminder by title
@@ -625,7 +640,7 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
         if (reminder.hasRecurrenceRules && reminder.recurrenceRules) {
             #pragma clang diagnostic push
             #pragma clang diagnostic ignored "-Wundeclared-selector"
-            if (0 /* prints roughly the same as reminder.recurrenceRules[0].description, so this is extraneous */ && [reminder respondsToSelector:@selector(recurrenceRuleString)]) {
+            if (/* DISABLES CODE */ (0) /* prints roughly the same as reminder.recurrenceRules[0].description, so this is extraneous */ && [reminder respondsToSelector:@selector(recurrenceRuleString)]) {
                 _print(stdout, @"%@Recurrence Description (recurrenceRuleString): %@\n", indent, [reminder performSelector:@selector(recurrenceRuleString)]);
             }
             NSOperatingSystemVersion osVersion = [[NSProcessInfo processInfo] operatingSystemVersion];

@@ -34,6 +34,9 @@ NS_ASSUME_NONNULL_BEGIN
 -(NSString*_Nullable)startDateComponentsStringUsingDateFormatter:(NSDateFormatter*_Nonnull)dateFormatter;
 -(NSString*_Nullable)startDateComponentsString; // use NSDateFormatter with current locale, short date style, long time style
 
+// reminder array sorting
++ (NSArray<EKReminder*> *)extractSortedCompleted:(NSArray<EKReminder*> *)reminders;
+
 @end
 
 NS_ASSUME_NONNULL_END

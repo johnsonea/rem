@@ -105,6 +105,17 @@
     return [self startDateComponentsStringUsingDateFormatter:dateFormatter];
 }
 
+// reminder array sorting
++ (NSArray<EKReminder*> *)extractSortedCompleted:(NSArray<EKReminder*> *)reminders {
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"(completed == YES) && (completionDate != nil)"]; // [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) { ((EKReminder*)object).completed; }];
+    NSArray<EKReminder*> *completedReminders = [reminders filteredArrayUsingPredicate:predicate];
+    return [completedReminders sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+        NSDate *A = [(EKReminder*)a completionDate];
+        NSDate *B = [(EKReminder*)b completionDate];
+        // since we filtered to only completed reminders, neither A nor B should be nil
+        return [A compare:B];
+    }];
+}
 
 
 
