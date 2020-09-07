@@ -22,31 +22,47 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface EKAlarm (stringWith)
 
+// interfaces to EKMutableAlarm
 - (BOOL)hasSnooze;
 - (BOOL)noSnooze;
 - (BOOL)snoozing;
 - (void)setSnoozing:(BOOL)newSnoozed;
 
+// location strings
+NSString *structuredLocationString(EKStructuredLocation *loc);
+- (NSString *)proximityStr;
+- (NSString *)typeString;
+
+// alarm to string
+- (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
+- (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
+
+// array operation
+- (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms;
+
+// duplication methods
+- (EKAlarm *)duplicateAlarm;
+- (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate;
+- (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs;
+
+// date operations
+- (BOOL)isInPast;
+- (BOOL)isInPastForReminder:(EKReminder* _Nullable)reminder;
+
 - (NSDate*_Nullable)alarmDateForReminder:(EKReminder* _Nullable)reminder; // returns nil if there is no identifiable date
 - (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder; // returns NAN if there is no identifiable date
 - (BOOL)isUnsnoozedAndInPast;
 - (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder;
-- (BOOL)isInPast;
-- (BOOL)isInPastForReminder:(EKReminder* _Nullable)reminder;
 
-NSString *structuredLocationString(EKStructuredLocation *loc);
-- (NSString *)proximityStr;
-- (NSString *)typeString;
-- (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
-- (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
+// dated alarm convenience routines
++ (NSArray<EKAlarm*> *)datedAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
++ (NSArray<EKAlarm*> *)pastAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
++ (NSArray<EKAlarm*> *)futureAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
 
-+ (EKAlarm *)mostRecentAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
-+ (NSArray<EKAlarm*> *)sortAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
-- (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms;
++ (NSArray<EKAlarm*> *)sortAlarmsByDateFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
 
-- (EKAlarm *)duplicateAlarm;
-- (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate;
-- (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs;
++ (EKAlarm *)latestAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
++ (EKAlarm *)earliestAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder;
 
 @end
 

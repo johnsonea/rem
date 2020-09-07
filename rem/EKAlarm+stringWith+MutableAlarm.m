@@ -45,6 +45,10 @@
 
 @implementation EKAlarm (stringWith)
 
+/*
+ *  interfaces to EKMutableAlarm
+ */
+
 - (BOOL)hasSnooze {
     return [self respondsToSelector:@selector(isSnoozed)];
 }
@@ -59,33 +63,6 @@
     ((EKMutableAlarm*)self).isSnoozed = newSnoozed;
 }
 
-- (NSDate*_Nullable)alarmDateForReminder:(EKReminder* _Nullable)reminder { // returns nil if there is no identifiable date
-    return self.absoluteDate ? self.absoluteDate : reminder && reminder.dueDateComponents ? [NSDate dateWithTimeInterval:self.relativeOffset sinceDate:[[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]] : nil;
-}
-- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder { // returns NAN if there is no identifiable date
-    NSDate *alarmDate = [self alarmDateForReminder:reminder];
-    return alarmDate==nil ? NAN : [alarmDate timeIntervalSinceNow];
-}
-- (BOOL)isUnsnoozedAndInPast {
-    return [self isUnsnoozedAndInPastForReminder:nil];
-}
-- (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder {
-    if ([self hasSnooze] && [(EKMutableAlarm*)self isSnoozed]) return NO;
-    NSTimeInterval secsInFuture = [self timeIntervalSinceNowForReminder:reminder];
-    if isnan(secsInFuture) // cannot determine
-        return NO;
-    return (secsInFuture < 0.0);
-}
-- (BOOL)isInPast {
-    return [self isInPastForReminder:nil];
-}
-- (BOOL)isInPastForReminder:(EKReminder* _Nullable)reminder {
-    NSTimeInterval secsInFuture = [self timeIntervalSinceNowForReminder:reminder];
-    if isnan(secsInFuture) // cannot determine
-        return NO;
-    return (secsInFuture < 0.0);
-}
-
 - (BOOL)hasDefault {
     return [self respondsToSelector:@selector(isDefault)];
 }
@@ -95,9 +72,11 @@
 - (BOOL)defaulting { // need different name from isDefault
     return [self hasDefault] ? [(EKMutableAlarm*)self isDefault] : NO;
 }
-//- (void)setDefaulting:(BOOL)newDefault { // setIsDefault may cause problems
-//    [(EKMutableAlarm*)self setTheDefaultTo:newDefault]; // NSLog(@"EKAlarm -setDefaulting: cannot set a read-only property"); // ((EKMutableAlarm*)self).isDefault = newDefault;
-//}
+/*
+- (void)setDefaulting:(BOOL)newDefault { // setIsDefault may cause problems
+    [(EKMutableAlarm*)self setTheDefaultTo:newDefault]; // NSLog(@"EKAlarm -setDefaulting: cannot set a read-only property"); // ((EKMutableAlarm*)self).isDefault = newDefault;
+}
+*/
 
 - (BOOL)hasSharedUID {
     return [self respondsToSelector:@selector(sharedUID)];
@@ -108,12 +87,19 @@
 - (NSString *)sharedUIDing { // need different name from isSharedUID
     return [self hasSharedUID] ? [(EKMutableAlarm*)self sharedUID] : @"";
 }
-//- (void)setSharedUIDing:(BOOL)newSharedUID { // setIsSharedUID may cause problems
-//    // doesn't work because I cannot access the sharedUID read-only property; trying via coercing to EKMutableAlarm didn't work either
-//    NSLog(@"EKAlarm -setSharedUIDing: not yet written");
-//    exit(254);
-//    // ((EKMutableAlarm*)self).sharedUID = newSharedUID;
-//}
+/*
+- (void)setSharedUIDing:(BOOL)newSharedUID { // setIsSharedUID may cause problems
+    // doesn't work because I cannot access the sharedUID read-only property; trying via coercing to EKMutableAlarm didn't work either
+    NSLog(@"EKAlarm -setSharedUIDing: not yet written");
+    exit(254);
+    // ((EKMutableAlarm*)self).sharedUID = newSharedUID;
+}
+*/
+
+
+/*
+ *  location strings
+ */
 
 #define GEOLOC_DEBUG 0
 NSString *structuredLocationString(EKStructuredLocation *loc) {
@@ -176,6 +162,10 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
     [NSString stringWithFormat:@"%@",@(self.type)];
 }
 
+
+/*
+ *  alarm to string
+ */
 
 static BOOL showWarning = YES;
 - (NSString*)undocumentedProperties {
@@ -262,35 +252,9 @@ static BOOL showWarning = YES;
 }
 
 
-+ (EKAlarm *)mostRecentAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
-    EKAlarm *mostRecent;
-    NSTimeInterval mostRecentTimeSinceNow;
-    for (EKAlarm *alarm in alarms) {
-        NSTimeInterval timeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder]; // returns NAN if there is no identifiable date
-        if (isnan(mostRecentTimeSinceNow)) {
-            // ignore
-        } else if (!mostRecent || timeSinceNow>mostRecentTimeSinceNow) {
-            mostRecent = alarm;
-            mostRecentTimeSinceNow = timeSinceNow;
-        }
-    }
-    return mostRecent;
-}
-+ (NSArray<EKAlarm*> *)sortAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
-    return [alarms sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
-        NSTimeInterval A = [(EKAlarm*)a timeIntervalSinceNowForReminder:reminder];
-        NSTimeInterval B = [(EKAlarm*)b timeIntervalSinceNowForReminder:reminder];
-        // will be NAN if there is no identifiable date
-        // let's put NAN's after real dates
-        return (isnan(A)&&isnan(B))||A==B ? NSOrderedSame // need the isnan checks because NAN is never equal to NAN
-            : isnan(A) ? NSOrderedDescending
-            : isnan(B) ? NSOrderedAscending
-            : A>B ? NSOrderedDescending
-            : NSOrderedAscending;
-    }];
-}
-
-
+/*
+ *  array operation
+ */
 
 - (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms {
     if (!alarms || !alarms.count) return @[]; // empty array
@@ -298,6 +262,11 @@ static BOOL showWarning = YES;
      [alarmsMutable removeObject:self];
      return [alarmsMutable copy];
 }
+
+
+/*
+ *  duplication methods
+ */
 
 - (EKAlarm *)duplicateAlarm {
     return [self copy];
@@ -310,5 +279,121 @@ static BOOL showWarning = YES;
 - (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs {
     return [self duplicateAlarmChangingTimeTo:[NSDate dateWithTimeIntervalSinceNow:secs]];
 }
+
+
+/*
+ *  date operations
+ */
+
+- (BOOL)isInPast {
+    return [self isInPastForReminder:nil];
+}
+- (BOOL)isInPastForReminder:(EKReminder* _Nullable)reminder {
+    NSTimeInterval secsInFuture = [self timeIntervalSinceNowForReminder:reminder];
+    if isnan(secsInFuture) // cannot determine
+        return NO;
+    return (secsInFuture < 0.0);
+}
+
+- (NSDate*_Nullable)alarmDateForReminder:(EKReminder* _Nullable)reminder { // returns nil if there is no identifiable date
+    return self.absoluteDate ? self.absoluteDate : reminder && reminder.dueDateComponents ? [NSDate dateWithTimeInterval:self.relativeOffset sinceDate:[[NSCalendar currentCalendar] dateFromComponents:reminder.dueDateComponents]] : nil;
+}
+- (NSTimeInterval)timeIntervalSinceNowForReminder:(EKReminder* _Nullable)reminder { // returns NAN if there is no identifiable date
+    NSDate *alarmDate = [self alarmDateForReminder:reminder];
+    return alarmDate==nil ? NAN : [alarmDate timeIntervalSinceNow];
+}
+- (BOOL)isUnsnoozedAndInPast {
+    return [self isUnsnoozedAndInPastForReminder:nil];
+}
+- (BOOL)isUnsnoozedAndInPastForReminder:(EKReminder* _Nullable)reminder {
+    if ([self hasSnooze] && [(EKMutableAlarm*)self isSnoozed]) return NO;
+    NSTimeInterval secsInFuture = [self timeIntervalSinceNowForReminder:reminder];
+    if isnan(secsInFuture) // cannot determine
+        return NO;
+    return (secsInFuture < 0.0);
+}
+
+
+/*
+ *  dated alarm convenience routines
+ */
+
++ (NSArray<EKAlarm*> *)datedAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    NSPredicate *predicate = [NSPredicate predicateWithBlock:^BOOL(id  _Nullable object, NSDictionary<NSString *,id> * _Nullable bindings) {
+        EKAlarm *alarm = (EKAlarm*)object;
+        NSTimeInterval alarmTimeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder];
+        return ! isnan(alarmTimeSinceNow);
+    }];
+    return [alarms filteredArrayUsingPredicate:predicate];
+}
++ (NSArray<EKAlarm*> *)pastAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    NSPredicate *predicate = [NSPredicate predicateWithBlock:^BOOL(id  _Nullable object, NSDictionary<NSString *,id> * _Nullable bindings) {
+        EKAlarm *alarm = (EKAlarm*)object;
+        NSTimeInterval alarmTimeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder];
+        return isnan(alarmTimeSinceNow) ? NO : alarmTimeSinceNow<=0;
+    }];
+    return [alarms filteredArrayUsingPredicate:predicate];
+}
++ (NSArray<EKAlarm*> *)futureAlarmsFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    NSPredicate *predicate = [NSPredicate predicateWithBlock:^BOOL(id  _Nullable object, NSDictionary<NSString *,id> * _Nullable bindings) {
+        EKAlarm *alarm = (EKAlarm*)object;
+        NSTimeInterval alarmTimeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder];
+        return isnan(alarmTimeSinceNow) ? NO : alarmTimeSinceNow>0;
+    }];
+    return [alarms filteredArrayUsingPredicate:predicate];
+}
+
++ (NSArray<EKAlarm*> *)sortAlarmsByDateFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    return [alarms sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+        NSTimeInterval A = [(EKAlarm*)a timeIntervalSinceNowForReminder:reminder];
+        NSTimeInterval B = [(EKAlarm*)b timeIntervalSinceNowForReminder:reminder];
+        // will be NAN if there is no identifiable date
+        // let's put NAN's after real dates
+        return (isnan(A)&&isnan(B))||A==B ? NSOrderedSame // need the isnan checks because NAN is never equal to NAN
+            : isnan(A) ? NSOrderedDescending
+            : isnan(B) ? NSOrderedAscending
+            : A>B ? NSOrderedDescending
+            : NSOrderedAscending;
+    }];
+}
++ (NSArray<EKAlarm*> *)sortDatedAlarmsByDateFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    NSPredicate *predicate = [NSPredicate predicateWithBlock:^BOOL(id  _Nullable object, NSDictionary<NSString *,id> * _Nullable bindings) {
+        EKAlarm *alarm = (EKAlarm*)object;
+        return ! isnan([alarm timeIntervalSinceNowForReminder:reminder]);
+    }];
+    NSArray<EKAlarm*> *datedAlarms = [alarms filteredArrayUsingPredicate:predicate];
+    return [EKAlarm sortDatedAlarmsByDateFromArray:datedAlarms forReminder:reminder];
+}
+
++ (EKAlarm *)latestAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    EKAlarm *latestAlarm;
+    NSTimeInterval latestAlarmTimeSinceNow;
+    for (EKAlarm *alarm in alarms) {
+        NSTimeInterval timeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder]; // returns NAN if there is no identifiable date
+        if (isnan(latestAlarmTimeSinceNow)) {
+            // ignore
+        } else if (!latestAlarm || timeSinceNow>latestAlarmTimeSinceNow) {
+            latestAlarm = alarm;
+            latestAlarmTimeSinceNow = timeSinceNow;
+        }
+    }
+    return latestAlarm;
+}
++ (EKAlarm *)earliestAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
+    EKAlarm *earliestAlarm;
+    NSTimeInterval earliestAlarmTimeSinceNow;
+    for (EKAlarm *alarm in alarms) {
+        NSTimeInterval timeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder]; // returns NAN if there is no identifiable date
+        if (isnan(earliestAlarmTimeSinceNow)) {
+            // ignore
+        } else if (!earliestAlarm || timeSinceNow<earliestAlarmTimeSinceNow) {
+            earliestAlarm = alarm;
+            earliestAlarmTimeSinceNow = timeSinceNow;
+        }
+    }
+    return earliestAlarm;
+}
+
+
 
 @end

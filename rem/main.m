@@ -502,7 +502,7 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             dateFormatter.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
             for (EKReminder *rem in filteredReminders) {
                 NSDate *dueDate = [rem dueDateFromComponents];
-                NSDate *alarmDate = rem.hasAlarms ? [[EKAlarm mostRecentAlarmFromArray:rem.alarms forReminder:rem] alarmDateForReminder:rem] : nil;
+                NSDate *alarmDate = rem.hasAlarms ? [[EKAlarm latestAlarmFromArray:rem.alarms forReminder:rem] alarmDateForReminder:rem] : nil;
                 if (alarmDate && dueDate && [alarmDate isEqualToDate:dueDate])
                     alarmDate = nil;
                 NSString *dueDateString = dueDate ? [NSString stringWithFormat:@"due %@",[dateFormatter stringFromDate:dueDate]] : nil;
@@ -667,7 +667,7 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
             }
         }
         if (reminder.hasAlarms && reminder.alarms && reminder.alarms.count) {
-            NSArray<EKAlarm*> *alarms = SORT_ALARMS_BY_TIME ? [EKAlarm sortAlarmsFromArray:reminder.alarms forReminder:reminder] : reminder.alarms;
+            NSArray<EKAlarm*> *alarms = SORT_ALARMS_BY_TIME ? [EKAlarm sortAlarmsByDateFromArray:reminder.alarms forReminder:reminder] : reminder.alarms;
             for (NSUInteger i=0; i<alarms.count; i++) {
                 _print(stdout, @"%@Alarm %@: %@\n", indent, @(i+1), [alarms[i] stringWithDateFormatter:dateFormatterShortDateLongTime forReminder:reminder]);
             }
@@ -1352,7 +1352,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     BOOL deleteAlarmToSnooze = NO;
     if ((extraneousAlarmsButWillNotDelete=[reminder snoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
         // snooze the most recent of these alarms (do not delete the others)
-        alarmToSnooze = [EKAlarm mostRecentAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
+        alarmToSnooze = [EKAlarm latestAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
         deleteAlarmToSnooze = YES;
         // get here for snoozed reminders in Mojave but not in Catalina
     }
@@ -1360,7 +1360,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         // snooze the most recent of these
         // NOTE: we get here if a reminder has never been snoozed in Notification Center: the only alarm has isSnoozed=0 but has fired
         // NOTE: I tried creating a new alarm with isSnoozed=1 and a later date and adding it to the alarm -- which is what Notification Center does -- but it always ended up _replacing_ the original isSnoozed=0 alarm
-        alarmToSnooze = [EKAlarm mostRecentAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
+        alarmToSnooze = [EKAlarm latestAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
         // in Catalina: we only get this type of alarm
         if (extraneousAlarmsButWillNotDelete.count > 1) // if there is an original alarm and a snoozed one
             deleteAlarmToSnooze = YES;
