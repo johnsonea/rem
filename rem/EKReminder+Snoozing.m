@@ -9,6 +9,11 @@
 #import "EKReminder+Snoozing.h"
 #import "NSMutableArray+Queue.h"
 
+// NOTE 09/07/2020: in macOS 10.15 Catalina, it seems that:
+//  * the undocumented "snoozing" property exists but is not set when snoozing via the Notification Center (in some prior macOS, this was set)
+//  * snoozing (via Notification Center) a new reminder adds an alarm for the new snooze time but leaves the original one as is (probably the same behavior as prior macOS versions)
+//  * snoozing (via Notification Center) a reminder that was previously snoozed deletes the newer alarm and adds a new one with the new time, as evidenced by an altered sharedUID property (probably the same behavior as prior macOS versions)
+
 @implementation EKReminder (Snoozing)
 
 - (BOOL)isSnoozed {

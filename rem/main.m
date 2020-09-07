@@ -482,7 +482,7 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             }
             if (! titleMatches) return NO;
             if (command != CMD_SNOOZE) return YES;
-            if (reminder.isSnoozed) return YES;
+            if (reminder.isSnoozed) return YES; // never happens in Catalina
             if (!reminder.hasAlarms) return NO;
             if ([reminder hasUnsnoozedPastAlarms]) return YES;
             return NO;
@@ -1349,15 +1349,21 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     
     NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
     EKAlarm *alarmToSnooze;
+    BOOL deleteAlarmToSnooze = NO;
     if ((extraneousAlarmsButWillNotDelete=[reminder snoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
         // snooze the most recent of these alarms (do not delete the others)
         alarmToSnooze = [EKAlarm mostRecentAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
+        deleteAlarmToSnooze = YES;
+        // get here for snoozed reminders in Mojave but not in Catalina
     }
     if (!alarmToSnooze && (extraneousAlarmsButWillNotDelete=[reminder unsnoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
         // snooze the most recent of these
         // NOTE: we get here if a reminder has never been snoozed in Notification Center: the only alarm has isSnoozed=0 but has fired
         // NOTE: I tried creating a new alarm with isSnoozed=1 and a later date and adding it to the alarm -- which is what Notification Center does -- but it always ended up _replacing_ the original isSnoozed=0 alarm
         alarmToSnooze = [EKAlarm mostRecentAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
+        // in Catalina: we only get this type of alarm
+        if (extraneousAlarmsButWillNotDelete.count > 1) // if there is an original alarm and a snoozed one
+            deleteAlarmToSnooze = YES;
     }
     if (!alarmToSnooze) {
         _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is not snoozing\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
@@ -1365,11 +1371,12 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
     }
     extraneousAlarmsButWillNotDelete = [alarmToSnooze arrayByRemovingFromArray:extraneousAlarmsButWillNotDelete];
     EKAlarm *newAlarm = [alarmToSnooze duplicateAlarmChangingTimeToNowPlusSecs:snoozeSeconds];
-    [reminder removeAlarm:alarmToSnooze];
+    if (deleteAlarmToSnooze)
+        [reminder removeAlarm:alarmToSnooze];
     [reminder addAlarm:newAlarm];
     /* could delete extraneous alarms with:
         for (EKAlarm *alarm in extraneousAlarmsButWillNotDelete) [reminder removeAlarm:alarm];
-       but (a) it doesn't seem that we normally end up with any such alarms
+       but (a) in Mojave, it doesn't seem that we normally end up with any such alarms; in Catalina, we do but one of them is the original alarm which should not be deleted
        and (b) such past alarms may also have a location attached, trigger other things (email, URL, etc.) so shouldn't delete them
      */
     
