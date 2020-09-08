@@ -681,6 +681,10 @@ static void showReminder(EKReminder *reminder, BOOL showTitle, BOOL lastReminder
             #pragma clang diagnostic ignored "-Wundeclared-selector"
             if ([reminder respondsToSelector:@selector(_sharedUID)])
                 _print(stdout, @"%@_sharedUID: %@\n", indent, [reminder performSelector:@selector(_sharedUID)]);
+            if ([reminder respondsToSelector:@selector(defaultAlarmWasDeleted)] && [reminder errorMessageWhenBOOLFromPerformingSelector:@selector(defaultAlarmWasDeleted)]!=nil)
+                _print(stdout, @"%@defaultAlarmWasDeleted: %@\n", indent, [reminder BOOLFromPerformingSelector:@selector(defaultAlarmWasDeleted)]);
+            else if ([reminder respondsToSelector:@selector(getDefaultAlarmWasDeleted)] && [reminder errorMessageWhenBOOLFromPerformingSelector:@selector(getDefaultAlarmWasDeleted)]!=nil)
+                _print(stdout, @"%@defaultAlarmWasDeleted (get): %@\n", indent, [reminder BOOLFromPerformingSelector:@selector(getDefaultAlarmWasDeleted)]);
             // if ([[reminder class] respondsToSelector:@selector(actionStringsDisplayName)]) _print(stdout, @"%@actionStringsDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsDisplayName)]); // @"Reminder"
             // if ([[reminder class] respondsToSelector:@selector(actionStringsPluralDisplayName)]) _print(stdout, @"%@actionStringsPluralDisplayName: %@\n", indent, [[reminder class] performSelector:@selector(actionStringsPluralDisplayName)]); // @"Reminders"
             // if ([reminder respondsToSelector:@selector(actionStringsDisplayTitle)]) _print(stdout, @"%@actionStringsDisplayTitle: %@\n", indent, [reminder performSelector:@selector(actionStringsDisplayTitle)]); // seems to be the same as reminder.title
@@ -1460,6 +1464,10 @@ int main(int argc, const char * argv[]) {
         // [NSString testStringRegex]; exit(0);
 
         useAdvanced = [@"johnsone" isEqualToString:NSUserName()];
+        if (useAdvanced) {
+            showReminderUndocumentedPropertiesWarning = NO;
+            [EKAlarm disableEKAlarmUndocumentedWarning];
+        }
         
         NSMutableArray *itemArgs;
         exitStatus = parseArguments(&itemArgs);

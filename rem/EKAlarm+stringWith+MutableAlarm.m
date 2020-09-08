@@ -168,6 +168,9 @@ NSString *structuredLocationString(EKStructuredLocation *loc) {
  */
 
 static BOOL showWarning = YES;
++ (void)disableEKAlarmUndocumentedWarning {
+    showWarning = NO;
+}
 - (NSString*)undocumentedProperties {
     if (showWarning) {
         NSLog(@"Showing undocumented EKAlarm properties");

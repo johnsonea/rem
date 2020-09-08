@@ -34,6 +34,7 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (NSString *)typeString;
 
 // alarm to string
++ (void)disableEKAlarmUndocumentedWarning;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter;
 - (NSString *)stringWithDateFormatter:(NSDateFormatter* _Nullable)formatter forReminder:(EKReminder * _Nullable)reminder;
 
