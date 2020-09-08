@@ -20,7 +20,7 @@
 #import "NSMutableArray+Queue.h"
 #import <CoreLocation/CoreLocation.h>
 #import "NSString+regex.h"
-
+#import "PropertyUtil.h" // TEMP
 
 /*
  TO DO:
@@ -1462,6 +1462,18 @@ int main(int argc, const char * argv[]) {
         misspellings = MISSPELLINGS;
         
         // [NSString testStringRegex]; exit(0);
+        
+        /*
+        NSDictionary<NSString*,NSString*> *props = [PropertyUtil classPropsFor:[EKAlarm class]];
+        NSLog(@"EKAlarm properties:");
+        for (NSString *key in props)
+            NSLog(@"    %@ %@;",[props objectForKey:key],key);
+        props = [PropertyUtil classPropsFor:[EKReminder class]];
+        NSLog(@"EKReminder properties:");
+        for (NSString *key in props)
+            NSLog(@"    %@ %@;",[props objectForKey:key],key);
+        return 0;
+        */
 
         useAdvanced = [@"johnsone" isEqualToString:NSUserName()];
         if (useAdvanced) {

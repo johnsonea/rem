@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0C0C6DBA236E586E00E60A89 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C0C6DB9236E586E00E60A89 /* AppKit.framework */; };
+		0C3C689025073A33008519E8 /* PropertyUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C3C688F25073A33008519E8 /* PropertyUtil.m */; };
 		0C3D683C247BBE6E004D9B7B /* popenv.c in Sources */ = {isa = PBXBuildFile; fileRef = 0C3D683B247BBE6E004D9B7B /* popenv.c */; };
 		0C4F43C1238B2C510075C222 /* ScriptingBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C4F43C0238B2C510075C222 /* ScriptingBridge.framework */; };
 		0C4F43C3238B757E0075C222 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C4F43C2238B757E0075C222 /* CoreLocation.framework */; };
@@ -39,6 +40,8 @@
 
 /* Begin PBXFileReference section */
 		0C0C6DB9236E586E00E60A89 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		0C3C688F25073A33008519E8 /* PropertyUtil.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PropertyUtil.m; sourceTree = "<group>"; };
+		0C3C689125073A79008519E8 /* PropertyUtil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PropertyUtil.h; sourceTree = "<group>"; };
 		0C3D683A247BBE6E004D9B7B /* popenv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = popenv.h; path = ../../../../bin/popenv.h; sourceTree = "<group>"; };
 		0C3D683B247BBE6E004D9B7B /* popenv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = popenv.c; path = ../../../../bin/popenv.c; sourceTree = "<group>"; };
 		0C4F43BF238B2B590075C222 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
@@ -148,6 +151,8 @@
 				0C6441D02369473E00F3366A /* EKReminder+Snoozing.m */,
 				E5C96A4116261A4A00611642 /* rem.1 */,
 				E5C96A3F16261A4A00611642 /* Supporting Files */,
+				0C3C688F25073A33008519E8 /* PropertyUtil.m */,
+				0C3C689125073A79008519E8 /* PropertyUtil.h */,
 			);
 			path = rem;
 			sourceTree = "<group>";
@@ -212,6 +217,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C3C689025073A33008519E8 /* PropertyUtil.m in Sources */,
 				0C3D683C247BBE6E004D9B7B /* popenv.c in Sources */,
 				0C6441D12369473E00F3366A /* EKReminder+Snoozing.m in Sources */,
 				0CD989DE245B7C8100897B0A /* EKEventStore+Utilities.m in Sources */,
