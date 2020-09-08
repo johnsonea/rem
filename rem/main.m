@@ -1343,7 +1343,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         return EXIT_SNOOZE_ALREADYCOMPLETED;
     }
     if (!reminder.hasAlarms || reminder.alarms==nil || reminder.alarms.count==0) {
-        _print(stderr, @"%@: Reminder #%@ \"%@\" from list % has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+        _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOALARMS;
     }
     
