@@ -3,7 +3,7 @@
 //  rem
 //
 //  Created by Erik A Johnson on 11/26/19.
-//  Copyright © 2019 Erik A Johnson. All rights reserved.
+//  Copyright © 2019-20 Erik A Johnson. All rights reserved.
 //
 
 #import "NSObject+performSelectorSafely.h"

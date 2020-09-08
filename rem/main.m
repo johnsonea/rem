@@ -1463,7 +1463,7 @@ int main(int argc, const char * argv[]) {
         
         // [NSString testStringRegex]; exit(0);
         
-        /*
+        /* // TEMP
         NSDictionary<NSString*,NSString*> *props = [PropertyUtil classPropsFor:[EKAlarm class]];
         NSLog(@"EKAlarm properties:");
         for (NSString *key in props)
