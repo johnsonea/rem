@@ -771,29 +771,35 @@ int scanDoubleAlone(NSString *str, double *ref) {
 int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
     if (DEBUG>1) NSLog(@"parseTimeSeparatedByDHMS: substr=%@",substr);
     NSDictionary<NSNumber*,NSString*> *groups;
-    @try { groups = [substr substringsFirstMatchingRegexStringI:@"^\\s*(?:(\\d+(?:\\.\\d*)?)\\s*d)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*h)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*m)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*s?)?\\s*$"]; } @catch (NSException *exception) {
+    @try { groups = [substr substringsFirstMatchingRegexStringI:@"^\\s*([+-]?)\\s*(?:(\\d+(?:\\.\\d*)?)\\s*d)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*h)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*m)?\\s*(?:(\\d+(?:\\.\\d*)?)\\s*s?)?\\s*$"]; } @catch (NSException *exception) {
         _print(stderr, @"%@: illegal DHMS regular expression (this should not happen): %@%@\n", MYNAME, exception.reason,exception.userInfo?[NSString stringWithFormat:@" (userInfo=%@)",exception.userInfo]:@"");
         return EXIT_FATAL;
     }
     if (!groups) return EXIT_CLEAN; // did not match
-    *secsRef = [[groups objectForKey:@1] doubleValue]*86400.0
-             + [[groups objectForKey:@2] doubleValue]*3600.0
-             + [[groups objectForKey:@3] doubleValue]*60.0
-             + [[groups objectForKey:@4] doubleValue]; // NOTE: nil's -> 0.0
+    *secsRef = [[groups objectForKey:@2] doubleValue]*86400.0
+             + [[groups objectForKey:@3] doubleValue]*3600.0
+             + [[groups objectForKey:@4] doubleValue]*60.0
+             + [[groups objectForKey:@5] doubleValue]; // NOTE: [nil doubleValue] -> 0.0
+    NSString *signString = [groups objectForKey:@1];
+    if (signString && [signString isEqualToString:@"-"])
+        *secsRef *= -1.0;
     if (DEBUG>1) NSLog(@"secs=%@",@(*secsRef));
     return EXIT_NORMAL;
 }
 int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
     NSDictionary<NSNumber*,NSString*> *groups;
-    @try { groups = [substr substringsFirstMatchingRegexStringI:@"^\\s*(?:(?:(?:(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(?:\\.\\d*)?)$"]; } @catch (NSException *exception) {
+    @try { groups = [substr substringsFirstMatchingRegexStringI:@"^\\s*([+-]?)\\s*(?:(?:(?:(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+)\\s*:)?\\s*(\\d+(?:\\.\\d*)?)$"]; } @catch (NSException *exception) {
        _print(stderr, @"%@: illegal D:H:M:S regular expression (this should not happen): %@%@\n", MYNAME, exception.reason,exception.userInfo?[NSString stringWithFormat:@" (userInfo=%@)",exception.userInfo]:@"");
        return EXIT_FATAL;
    }
     if (!groups) return EXIT_CLEAN; // did not match
-    *secsRef = [[groups objectForKey:@1] doubleValue]*86400.0
-             + [[groups objectForKey:@2] doubleValue]*3600.0
-             + [[groups objectForKey:@3] doubleValue]*60.0
-             + [[groups objectForKey:@4] doubleValue]; // NOTE: nil's -> 0.0
+    *secsRef = [[groups objectForKey:@2] doubleValue]*86400.0
+             + [[groups objectForKey:@3] doubleValue]*3600.0
+             + [[groups objectForKey:@4] doubleValue]*60.0
+             + [[groups objectForKey:@5] doubleValue]; // NOTE: [nil doubleValue] -> 0.0
+    NSString *signString = [groups objectForKey:@1];
+    if (signString && [signString isEqualToString:@"-"])
+        *secsRef *= -1.0;
     if (DEBUG>1) NSLog(@"secs=%@",@(*secsRef));
     return EXIT_NORMAL;
 }
