@@ -782,7 +782,7 @@ int parseTimeSeparatedByDHMS(NSString *substr, double *secsRef) {
              + [[groups objectForKey:@5] doubleValue]; // NOTE: [nil doubleValue] -> 0.0
     NSString *signString = [groups objectForKey:@1];
     if (signString && [signString isEqualToString:@"-"])
-        *secsRef *= -1.0;
+        *secsRef = - (*secsRef);
     if (DEBUG>1) NSLog(@"secs=%@",@(*secsRef));
     return EXIT_NORMAL;
 }
@@ -799,7 +799,7 @@ int parseTimeSeparatedByColons(NSString *substr, double *secsRef) {
              + [[groups objectForKey:@5] doubleValue]; // NOTE: [nil doubleValue] -> 0.0
     NSString *signString = [groups objectForKey:@1];
     if (signString && [signString isEqualToString:@"-"])
-        *secsRef *= -1.0;
+        *secsRef = - (*secsRef);
     if (DEBUG>1) NSLog(@"secs=%@",@(*secsRef));
     return EXIT_NORMAL;
 }
@@ -838,32 +838,28 @@ int stringToAbsoluteDate(NSString *str, NSString *label, NSDate **absoluteDateRe
     return EXIT_NORMAL;
 }
 int stringToAbsoluteDateOrRelativeOffset(NSString *str, NSString *label, NSDate **absoluteDateRef, NSTimeInterval *relativeOffsetRef) {
-    BOOL hasNegative;
     if (absoluteDateRef == nil) {
         _print(stderr, @"%@: stringToAbsoluteDateOrRelativeOffset's absoluteDateRef is nil (which should not happen).\n", MYNAME);
         return EXIT_INVARG_ABSORREL;
     } else if (relativeOffsetRef == nil) {
         _print(stderr, @"%@: stringToAbsoluteDateOrRelativeOffset's relativeOffsetRef is nil (which should not happen).\n", MYNAME);
         return EXIT_INVARG_ABSORREL;
-    } else if ((hasNegative=[str hasPrefix:MINUS_PREFIX]) || [str hasPrefix:PLUS_PREFIX]) {
-        NSString *substr = [str substringFromIndex:hasNegative?[MINUS_PREFIX length]:[PLUS_PREFIX length]];
+    } else if ([str hasPrefix:MINUS_PREFIX] || [str hasPrefix:PLUS_PREFIX]) {
         double secs = 0;
         int res;
         // res = scanDoubleAlone(substr, &secs); // no longer need this as the RegExps below should work
         // NSLog(@"res = %@",@(res));
         // if (res != 1) { // don't care if there were 0 or >=2
             // try something other than seconds
-            res = parseTimeSeparatedByDHMS(substr,&secs);
+            res = parseTimeSeparatedByDHMS(str,&secs);
             if (res == EXIT_CLEAN)
-                res = parseTimeSeparatedByColons(substr,&secs);
+                res = parseTimeSeparatedByColons(str,&secs);
             if (res == EXIT_CLEAN) { // couldn't match either pattern
                 _print(stderr, @"%@: %@bad relative offset seconds \"%@\".\n", MYNAME, label?[NSString stringWithFormat:@"for the %@ date, ",label]:@"", str);
                 return EXIT_INVARG_BADDURATION;
             } else if (res != EXIT_NORMAL)
                 return res;
         // }
-        if (hasNegative)
-            secs = - secs;
         // NSLog(@"stringToAbsoluteDateOrRelativeOffset: secs = %@",@(secs));
         *relativeOffsetRef = (NSTimeInterval)secs;
         *absoluteDateRef = nil; // shouldn't be necessary but just in case
@@ -1332,6 +1328,10 @@ int snoozeSecondsStringToTimeInterval(NSString *snoozeSecondsString) {
         } else if (res != EXIT_NORMAL)
             return res; // error message will already have been printed
         secs = secsDouble; // [snoozeSecondsString integerValue];
+        if (secs < 0.0) {
+            _print(stderr, @"%@: %@ duration \"%@\" (parsed as %@) is in the past.\n", MYNAME, COMMANDS[CMD_SNOOZE], snoozeSecondsString);
+            return EXIT_INVARG_BADSNOOZE;
+        }
     }
     snoozeSeconds = secs;
     return EXIT_NORMAL;
