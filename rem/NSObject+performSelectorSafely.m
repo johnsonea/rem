@@ -18,8 +18,8 @@
             [invocation setSelector:selector];
             [invocation setTarget:self];
             [invocation invoke];
-            id returnValue;
-            [invocation getReturnValue:&returnValue];
+            //eaj2026-09-25 id returnValue;
+            //eaj2026-09-25 [invocation getReturnValue:&returnValue];
             return YES;
         } @catch (NSException *exception) {
             // don't care
@@ -36,8 +36,8 @@
             [invocation setTarget:self];
             [invocation setArgument:&obj atIndex:2];
             [invocation invoke];
-            id returnValue;
-            [invocation getReturnValue:&returnValue];
+            //eaj2026-09-25 id returnValue;
+            //eaj2026-09-25 [invocation getReturnValue:&returnValue];
             return YES;
         } @catch (NSException *exception) {
             // don't care
@@ -53,7 +53,7 @@
         [invocation setSelector:selector];
         [invocation setTarget:self];
         [invocation invoke];
-        id returnValue;
+        __unsafe_unretained id returnValue; //eaj2026-09-25 id returnValue;
         [invocation getReturnValue:&returnValue];
         return returnValue;
     } @catch (NSException *exception) {
@@ -68,7 +68,7 @@
         [invocation setTarget:self];
         [invocation setArgument:&obj atIndex:2];
         [invocation invoke];
-        id returnValue;
+        __unsafe_unretained id returnValue; //eaj2026-09-25 id returnValue;
         [invocation getReturnValue:&returnValue];
         return returnValue;
     } @catch (NSException *exception) {
