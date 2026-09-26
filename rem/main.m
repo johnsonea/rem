@@ -27,7 +27,7 @@
     * snooze: why is the format "snooze '@10am tomorrow' --/review.STC-19" not working ("rem: Error unknown command @10am tomorrow")?
     * snooze: allow random snooze times, e.g., 5-60m would be uniformly distributed between 5m and 60m
     * snooze: allow additional snooze durations to be interspersed between items, e.g., "rem snooze Reminders 5m <items...> --snooze=10m <items...>" (or perhaps "--durations=10m"?)
-    * snooze: currently only reading reminders that are alerted, i.e., the latest alarm is in the past; if this gives no reminders, perhaps relax and read reminders that whose first alarm is in the past but last alarm is in the future (which would allow adjusting the snooze time even if not alerted)
+    * snooze: hard coded allowSnoozeFutureReminder to be NO; could change that based on some switch to relax and allow changing reminders that have no past alarm, or has one but the other alarms are in the future (which would allow adjusting the snooze time even if not alerted)
     * if the <list> doesn't exist but a similar list exists with diferent capitalization, change the error message to suggest the correct capitalization. Could also do the same if there is a slight misspelling (a letter omitted, a letter added, two letters swapped [which I often do when typing quickly]).
     * add: if title starts with "-date" warn that the user may have meant "--date"; better, ask for confirmation (like with rm)
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
@@ -86,6 +86,9 @@ static NSString *reminder_id_str = nil;
 static NSString *snoozeSecondsString = nil;
 static NSTimeInterval snoozeSeconds;
 static BOOL useAdvanced = NO;
+static BOOL allowSnoozeFutureReminder = YES;
+static BOOL updateAllFutureAlarmsEarlierThanSnooze = YES;
+static BOOL deleteExtraneousPastAlarmsWhenSnoozing = YES;
 
 static EKEventStore *store;
 static NSDictionary *calendars;
@@ -483,9 +486,19 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
             }
             if (! titleMatches) return NO;
             if (command != CMD_SNOOZE) return YES;
+            if (/* DISABLES CODE */ (1)) {
+                // new logic that works in Mojave & Catalina but possibly also allows changing the snooze time for non-alerted reminders (e.g., those with original alarm in the past and an updated alarm in the future, those with all alarms in the future)
+                if (!reminder.hasAlarms || !reminder.alarms || !reminder.alarms.count) return NO;
+                NSArray<EKAlarm*> *pastAlarms = [EKAlarm pastAlarmsFromArray:reminder.alarms forReminder:reminder];
+                NSArray<EKAlarm*> *futureAlarms = [EKAlarm futureAlarmsFromArray:reminder.alarms forReminder:reminder];
+                if (pastAlarms.count>1 || (pastAlarms.count && !futureAlarms.count) || allowSnoozeFutureReminder)
+                    return YES;
+            } else {
+            // old logic that worked okay in Mojave
             if (reminder.isSnoozed) return YES; // never happens in Catalina
             if (!reminder.hasAlarms) return NO;
             if ([reminder hasUnsnoozedPastAlarms]) return YES;
+            }
             return NO;
         }];
         NSArray *filteredReminders = [reminders filteredArrayUsingPredicate:predicate];
@@ -1353,11 +1366,168 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ is already completed\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_ALREADYCOMPLETED;
     }
+    if (0)
     if (!reminder.hasAlarms || reminder.alarms==nil || reminder.alarms.count==0) {
         _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ has no alarms\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
         return EXIT_SNOOZE_NOALARMS;
     }
     
+    if (/* DISABLES CODE */ (1)) {
+        // new version
+        NSArray<EKAlarm*> *pastAlarms = [EKAlarm pastAlarmsFromArray:reminder.alarms forReminder:reminder];
+        NSArray<EKAlarm*> *futureAlarms = [EKAlarm futureAlarmsFromArray:reminder.alarms forReminder:reminder];
+        /* Handling the alarm:
+            #future:  | 0                 | 1                     | >1
+          ------------+-------------------+-----------------------+--------------------
+          #past:   0  | normally DISALLOW | normally DISALLOW     | normally DISALLOW
+                      |                   |                       | shouldn't happen
+           preferred: | src=none          | src=earliest future   | src=earliest future
+                      | create new        | dup/mod               | dup/mod
+                      | add new           | delete src            | delete src
+                      |                   | add dup               | add dup
+                      |                   |                       | mod future<snooze?
+                      | working           |                       |
+                   ---+-------------------+-----------------------+--------------------
+                   1  | normally allow    | normally DISALLOW     | normally DISALLOW
+                      |                   |                       | shouldn't happen
+           preferred: | src=latest past   | src=earliest future   | src=earliest future
+                      | dup/mod           | dup/mod               | dup/mod
+                      | KEEP src          | delete src            | delete src
+                      | add dup           | add dup               | add dup
+                      |                   |                       | mod future<snooze?
+          workaround: | A delete src      | C del future -> (1,0) |
+                      | src=latest past   | delete future         |
+                      | dup/mod           | src=past              |
+                      | delete src        | dup/mod               |
+                      | add dup           | delete src            |
+                      |                   | add dup               |
+                   ---+-------------------+-----------------------+--------------------
+                   >1 | normally allow    | normally allow        | normally allow
+                      |                   | shouldn't happen      | shouldn't happen
+           preferred: | src=latest past   | src=latest past       | src=latest past
+                      | dup/mod           | dup/mod               | dup/mod
+                      | delete src        | delete src            | delete src
+                      | add dup           | add dup               | add dup
+                      |                   | mod future<snooze?    | mod future<snooze?
+          workaround: | B del except 1st  |                       |
+                      | src=oldest past   |                       |
+                      | del other past    |
+                      | dup/mod           |
+                      | delete src        |
+                      | add dup           |
+           NOTES (NC = Notification Center):
+            * A:
+                In my initial logic, we would keep the original alarm and create a new one at the new snooze time (so that it looks like an alarm snoozed by NC). However, duplicating the original alarm, modifying the copy, and adding it: (1) does not actually add it, but replaces the original alarm; (2) leaves the alarm showing on NC until the snooze time when it takes it off very briefly to re-show the animation sliding in from the side at the new snooze time.
+                I also tried creating a new alarm (not duplicating), but that just ended up with two alarms, NC still displayed the alert from the first one, and subsquently snoozing the new alarm via NC resulted in a _third_ alarm.
+                However, duplicating the original alarm, modifying the copy, deleting the original and adding the copy seems to work.  Doesn't leave an original alarm at the original time, but that's probably okay.
+            * B: created a reminder, snoozed it via NC, waited for it to return, then snoozed in remd: second alarm is updated but NC continues to show the reminder and redraws it at the new time (try creating a new alarm instead of duplicating? Nope. just adds yet another alarm.); if I then snooze the new alert via NC, I get 3 alarms now
+                    ==> the C workaround seems to mostly work: delete all but the oldest alarm, duplicate the oldest, modify the copy, delete the oldest, add the modified copy */
+                        // EKAlarm *oldestPastAlarm = [EKAlarm earliestAlarmFromArray:pastAlarms forReminder:reminder]; pastAlarms = [oldestPastAlarm arrayByRemovingFromArray:pastAlarms]; for (EKAlarm *alarm in pastAlarms) { NSLog(@"removing alarm %@",alarm); [reminder removeAlarm:alarm]; } pastAlarms = @[oldestPastAlarm];
+                        /*
+            * C:
+                Create, wait until alerted, then snooze via NC, then snooze via rem to move snooze time earlier, wait until alerted, then snooze via NC ==> end up with three alarms (two past, one future)
+                Workaround that mostly works: delete the future alarm, then duplicate the past alarm and add it; the resulting reminder has just the one alarm at the now future snooze time; i.e., delete the future alarm, which puts us in the (1,0) state that is mostly working. */
+                    // this solves the 1,1 problem: [reminder removeAlarm:futureAlarms[0]]; futureAlarms=nil;
+                    /*
+         */
+        
+        if ((pastAlarms.count==0 || (pastAlarms.count==1&&futureAlarms.count)) && !allowSnoozeFutureReminder) {
+            _print(stderr, @"%@: Reminder #%@ \"%@\" from list %@ has no alarms to snooze\n", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title);
+            return EXIT_SNOOZE_NOALARMS;
+        }
+        BOOL deleteSourceAlarm = pastAlarms.count || futureAlarms.count; // TODO: can probably get rid of deleteSourceAlarm entirely since my logic now seems to be to always delete the source alarm (if one exists)
+        NSLog(@"deleteSourceAlarm = %@",@(deleteSourceAlarm));
+        EKAlarm *sourceAlarm;
+        NSArray<EKAlarm*> *extraneousPastAlarms;
+        if (pastAlarms.count<2 && futureAlarms.count) {
+            sourceAlarm = [EKAlarm earliestAlarmFromArray:futureAlarms forReminder:reminder];
+            futureAlarms = [sourceAlarm arrayByRemovingFromArray:futureAlarms];
+        } else if (pastAlarms.count) {
+            sourceAlarm = [EKAlarm latestAlarmFromArray:pastAlarms forReminder:reminder];
+            extraneousPastAlarms = [sourceAlarm arrayByRemovingFromArray:pastAlarms];
+            EKAlarm *firstAlarm = [EKAlarm earliestAlarmFromArray:pastAlarms forReminder:reminder];
+            if (firstAlarm)
+                extraneousPastAlarms = [firstAlarm arrayByRemovingFromArray:extraneousPastAlarms];
+        } /* else (pastAlarms.count==0&&futureAlarms.count=0) sourceAlarm=nil; */
+        
+        /*
+        // test if we can delete an alarm ==> yes, we can
+        if (sourceAlarm) {
+            [reminder removeAlarm:sourceAlarm];
+            // save
+            NSError *error;
+            BOOL success = [store saveReminder:reminder commit:YES error:&error];
+            if (!success) {
+                _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
+                return EXIT_FAIL_SNOOZE;
+            }
+            return EXIT_NORMAL;
+        }
+        */
+        /*
+        // test if we can delete an alarm and add a new alarm ==> yes, this works
+        if (sourceAlarm) {
+            [reminder removeAlarm:sourceAlarm];
+            [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:snoozeSeconds]]];
+            // save
+            NSError *error;
+            BOOL success = [store saveReminder:reminder commit:YES error:&error];
+            if (!success) {
+                _print(stderr, @"%@: Error snoozing Reminder #%@ \"%@\" from list %@\n\t%@", MYNAME, @(reminder_id), reminder.title, reminder.calendar.title, localizedUnderlyingError(error));
+                return EXIT_FAIL_SNOOZE;
+            }
+            return EXIT_NORMAL;
+        }
+        */
+        
+        EKAlarm *newAlarm = sourceAlarm ? [sourceAlarm duplicateAlarmChangingTimeToNowPlusSecs:snoozeSeconds] : [EKAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:snoozeSeconds]];
+        // newAlarm = [EKAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:snoozeSeconds]];
+        // deleteSourceAlarm=NO;
+                
+        /* for testing */
+        NSLog(@"hi");
+        NSLog(@"pastAlarms.count=%@",@(pastAlarms.count));
+        NSLog(@"futureAlarms.count=%@",@(futureAlarms.count));
+        NSLog(@"sourceAlarm=%@",sourceAlarm);
+        NSLog(@"newAlarm=%@",newAlarm);
+        NSLog(@"deleteSourceAlarm=%@",@(deleteSourceAlarm));
+        // if (sourceAlarm == nil) [newAlarm NSLogAlarmTypeWithLabel:@"new alarm"];
+        /* end for testing */
+        
+        // NOTE: Catalina seems to need removeAlarm BEFORE addAlarm; this also works in Mojave (but did not test if Mojave can have them in the opposite order)
+        
+        // delete alarms
+        if (deleteSourceAlarm && sourceAlarm)
+            [reminder removeAlarm:sourceAlarm];
+        if (deleteExtraneousPastAlarmsWhenSnoozing && extraneousPastAlarms && extraneousPastAlarms.count)
+            for (EKAlarm *alarm in extraneousPastAlarms) {
+                NSDateFormatter *dateFormatterShortDateLongTime = [[NSDateFormatter alloc] init];
+                dateFormatterShortDateLongTime.dateStyle = NSDateFormatterShortStyle;
+                dateFormatterShortDateLongTime.timeStyle = NSDateFormatterLongStyle;
+                dateFormatterShortDateLongTime.locale = [NSLocale autoupdatingCurrentLocale]; // or [NSLocale currentLocale] or [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+                _print(stdout, @"deleting alarm: %@\n", [alarm stringWithDateFormatter:dateFormatterShortDateLongTime forReminder:reminder]);
+                [reminder removeAlarm:alarm];
+            }
+        NSMutableArray<EKAlarm*> *updatedFutureAlarms;
+        if (updateAllFutureAlarmsEarlierThanSnooze) {
+            updatedFutureAlarms = [NSMutableArray arrayWithCapacity:futureAlarms.count];
+            for (EKAlarm *alarm in futureAlarms)
+                if ([alarm timeIntervalSinceNowForReminder:reminder] < snoozeSeconds) {
+                    EKAlarm *updatedAlarm = [alarm duplicateAlarmChangingTimeToNowPlusSecs:snoozeSeconds];
+                    [updatedFutureAlarms addObject:updatedAlarm];
+                    [reminder removeAlarm:alarm];
+                }
+        }
+        
+        // add updated alarms
+        [reminder addAlarm:newAlarm];
+        if (updatedFutureAlarms)
+            for (EKAlarm *updatedAlarm in updatedFutureAlarms)
+                [reminder addAlarm:updatedAlarm];
+        // [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:500]]];
+
+    } else {
+    // old version
     NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
     EKAlarm *alarmToSnooze;
     BOOL deleteAlarmToSnooze = NO;
@@ -1390,6 +1560,7 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
        but (a) in Mojave, it doesn't seem that we normally end up with any such alarms; in Catalina, we do but one of them is the original alarm which should not be deleted
        and (b) such past alarms may also have a location attached, trigger other things (email, URL, etc.) so shouldn't delete them
      */
+    }
     
     // save it
     NSError *error;
