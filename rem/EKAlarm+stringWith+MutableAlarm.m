@@ -262,7 +262,7 @@ static BOOL showWarning = YES;
 - (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms {
     if (!alarms || !alarms.count) return @[]; // empty array
      NSMutableArray *alarmsMutable = [NSMutableArray arrayWithArray:alarms];
-     [alarmsMutable removeObject:self];
+     [alarmsMutable removeObject:self]; // does not give error if not in the array
      return [alarmsMutable copy];
 }
 
@@ -271,6 +271,15 @@ static BOOL showWarning = YES;
  *  duplication methods
  */
 
+- (void)NSLogAlarmTypeWithLabel:(NSString*)label { // for testing
+    EKAlarmType t=self.type;
+    if      (t==EKAlarmTypeAudio) NSLog(@"%@ %@ is of type EKAlarmTypeAudio",label,self);
+    else if (t==EKAlarmTypeDisplay) NSLog(@"%@ %@ is of type EKAlarmTypeDisplay",label,self);
+    else if (t==EKAlarmTypeEmail) NSLog(@"%@ %@ is of type EKAlarmTypeEmail",label,self);
+    else if (t==EKAlarmTypeProcedure) NSLog(@"%@ %@ is of type EKAlarmTypeProcedure",label,self);
+    else NSLog(@"%@ %@ is of type %@ (EKAlarmTypeAudio=%@, EKAlarmTypeDisplay=%@, EKAlarmTypeEmail=%@, EKAlarmTypeProcedure=%@)",label,self, @(t), @(EKAlarmTypeAudio), @(EKAlarmTypeDisplay), @(EKAlarmTypeEmail), @(EKAlarmTypeProcedure) );
+}
+
 - (EKAlarm *)duplicateAlarm {
     return [self copy];
 }
@@ -278,6 +287,18 @@ static BOOL showWarning = YES;
     EKAlarm *newAlarm = [self duplicateAlarm];
     newAlarm.absoluteDate = newDate;
     return newAlarm;
+    /* // if some future change requires creating a new alarm instead of duplicating, here is some code:
+        NSLog(@"original alarm:"); [self NSLogAlarmType];
+        EKAlarm *newAlarm = [EKAlarm alarmWithAbsoluteDate:newDate];
+        NSLog(@"new alarm:"); [newAlarm NSLogAlarmType];
+        if      (self.type == EKAlarmTypeAudio)
+            newAlarm.soundName = [self.soundName copy];
+        else if (self.type == EKAlarmTypeEmail)
+            newAlarm.emailAddress = [self.emailAddress sopy];
+        else if (self.type == EKAlarmTypeProcedure)
+            newAlarm.url = [self.url sopy];
+        return newAlarm;
+    */
 }
 - (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs {
     return [self duplicateAlarmChangingTimeTo:[NSDate dateWithTimeIntervalSinceNow:secs]];
@@ -365,7 +386,7 @@ static BOOL showWarning = YES;
         return ! isnan([alarm timeIntervalSinceNowForReminder:reminder]);
     }];
     NSArray<EKAlarm*> *datedAlarms = [alarms filteredArrayUsingPredicate:predicate];
-    return [EKAlarm sortDatedAlarmsByDateFromArray:datedAlarms forReminder:reminder];
+    return [EKAlarm sortAlarmsByDateFromArray:datedAlarms forReminder:reminder];
 }
 
 + (EKAlarm *)latestAlarmFromArray:(NSArray<EKAlarm*> *)alarms forReminder:(EKReminder*)reminder {
@@ -373,7 +394,7 @@ static BOOL showWarning = YES;
     NSTimeInterval latestAlarmTimeSinceNow;
     for (EKAlarm *alarm in alarms) {
         NSTimeInterval timeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder]; // returns NAN if there is no identifiable date
-        if (isnan(latestAlarmTimeSinceNow)) {
+        if (isnan(timeSinceNow)) {
             // ignore
         } else if (!latestAlarm || timeSinceNow>latestAlarmTimeSinceNow) {
             latestAlarm = alarm;
@@ -387,7 +408,7 @@ static BOOL showWarning = YES;
     NSTimeInterval earliestAlarmTimeSinceNow;
     for (EKAlarm *alarm in alarms) {
         NSTimeInterval timeSinceNow = [alarm timeIntervalSinceNowForReminder:reminder]; // returns NAN if there is no identifiable date
-        if (isnan(earliestAlarmTimeSinceNow)) {
+        if (isnan(timeSinceNow)) {
             // ignore
         } else if (!earliestAlarm || timeSinceNow<earliestAlarmTimeSinceNow) {
             earliestAlarm = alarm;

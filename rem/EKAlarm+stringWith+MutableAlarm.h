@@ -42,6 +42,7 @@ NSString *structuredLocationString(EKStructuredLocation *loc);
 - (NSArray<EKAlarm *>*_Nonnull)arrayByRemovingFromArray:(NSArray<EKAlarm *>*_Nullable)alarms;
 
 // duplication methods
+- (void)NSLogAlarmTypeWithLabel:(NSString*)label; // for testing
 - (EKAlarm *)duplicateAlarm;
 - (EKAlarm *)duplicateAlarmChangingTimeTo:(NSDate*)newDate;
 - (EKAlarm *)duplicateAlarmChangingTimeToNowPlusSecs:(NSTimeInterval)secs;

@@ -914,8 +914,8 @@ int latLongFromLocationString(double *latitudeRef, double *longitudeRef, NSStrin
     }
     // do I want to try deg/mins/secs.xxxxx ???
     if (!groups) return EXIT_CLEAN; // did not match
-    if (*latitudeRef)  *latitudeRef  = [[groups objectForKey:@1] doubleValue];
-    if (*longitudeRef) *longitudeRef = [[groups objectForKey:@2] doubleValue];
+    if (latitudeRef)  *latitudeRef  = [[groups objectForKey:@1] doubleValue];
+    if (longitudeRef) *longitudeRef = [[groups objectForKey:@2] doubleValue];
     *locationTitleStringRef = [NSString stringWithString:locationString];
     remainder = [remainder stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (remainder.length)
@@ -1009,7 +1009,7 @@ static int addReminder(NSMutableArray<NSString*> *itemArgs)
             NSTimeInterval relativeOffset;
             int res = stringToAbsoluteDateOrRelativeOffset(str,label,&absoluteDate,&relativeOffset);
             if (res != EXIT_NORMAL)
-                return EXIT_NORMAL;
+                return res; //eaj2026-09-25 return EXIT_NORMAL;
             if ([swtch isEqualToString:@"date"]) {
                 alarmDate = absoluteDate ? absoluteDate : [NSDate dateWithTimeIntervalSinceNow:relativeOffset];
                 normal_due = YES;

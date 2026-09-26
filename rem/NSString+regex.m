@@ -68,7 +68,7 @@ static NSString *errorDomainNSStringRegex = @"default.NSString.regex";
     if (firstMatch.numberOfRanges != regex.numberOfCaptureGroups+1) {
         // I don't know if this can happen, but just in case
         if (errorRef) *errorRef = [NSError errorWithDomain:errorDomainNSStringRegex code:ERRORCODE_REGEXP_BADMATCH userInfo:@{
-            NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Matching string \"%@\" with the regular expression \"%@\" returned the wrong number of ranges (%d but should be %d). This should not normally happen.",nil), self, regexString, firstMatch.numberOfRanges, regex.numberOfCaptureGroups+1],
+            NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Matching string \"%@\" with the regular expression \"%@\" returned the wrong number of ranges (%lu but should be %lu). This should not normally happen.",nil), self, regexString, (unsigned long)firstMatch.numberOfRanges, (unsigned long)regex.numberOfCaptureGroups+1],
             NSLocalizedFailureReasonErrorKey:NSLocalizedString(@"Unknown why this happened.",nil),
             NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Talk to the developer of this application.",nil),
         }];
@@ -113,7 +113,7 @@ static NSString *errorDomainNSStringRegex = @"default.NSString.regex";
     if (firstMatch.numberOfRanges != regex.numberOfCaptureGroups+1) {
         // I don't know if this can happen, but just in case
         if (errorRef) *errorRef = [NSError errorWithDomain:errorDomainNSStringRegex code:ERRORCODE_REGEXP_BADMATCH userInfo:@{
-            NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Matching string \"%@\" with the regular expression \"%@\" returned the wrong number of ranges (%d but should be %d). This should not normally happen.",nil), self, regexString, firstMatch.numberOfRanges, regex.numberOfCaptureGroups+1],
+            NSLocalizedDescriptionKey:[NSString stringWithFormat:NSLocalizedString(@"Matching string \"%@\" with the regular expression \"%@\" returned the wrong number of ranges (%lu but should be %lu). This should not normally happen.",nil), self, regexString, (unsigned long)firstMatch.numberOfRanges, (unsigned long)regex.numberOfCaptureGroups+1],
             NSLocalizedFailureReasonErrorKey:NSLocalizedString(@"Unknown why this happened.",nil),
             NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Talk to the developer of this application.",nil),
         }];
@@ -302,7 +302,7 @@ void _print(FILE *file, NSString *format, ...);
     NSUInteger nMatches = [regex numberOfMatchesInString:self options:0 range:NSMakeRange(0, [self length])];
     
     NSString *perl = @"";
-    char *argv[] = {"perl","-e","my ($str,$pat,$rep)=@ARGV; $str=~s/$pat/$rep/g; print $str;",self.UTF8String,pattern.UTF8String,replacement.UTF8String,NULL};
+    char *argv[] = {(char *)"perl",(char *)"-e",(char *)"my ($str,$pat,$rep)=@ARGV; $str=~s/$pat/$rep/g; print $str;",(char *)self.UTF8String,(char *)pattern.UTF8String,(char *)replacement.UTF8String,NULL};
     FILE *f = popenv("r",argv);
     char buf[BUFSIZE];
     while (fgets(buf,BUFSIZE,f) != NULL) {
