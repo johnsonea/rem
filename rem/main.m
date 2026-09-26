@@ -29,6 +29,7 @@
     * snooze: allow additional snooze durations to be interspersed between items, e.g., "rem snooze Reminders 5m <items...> --snooze=10m <items...>" (or perhaps "--durations=10m"?)
     * snooze: currently only reading reminders that are alerted, i.e., the latest alarm is in the past; if this gives no reminders, perhaps relax and read reminders that whose first alarm is in the past but last alarm is in the future (which would allow adjusting the snooze time even if not alerted)
     * if the <list> doesn't exist but a similar list exists with diferent capitalization, change the error message to suggest the correct capitalization. Could also do the same if there is a slight misspelling (a letter omitted, a letter added, two letters swapped [which I often do when typing quickly]).
+    * add: if title starts with "-date" warn that the user may have meant "--date"; better, ask for confirmation (like with rm)
     * done: save info on now-completed reminder so we can "undo" it and make it incomplete again
     * undone: save info on now-uncompleted reminder so we can "undo" it and make it completed again
     * rm: save reminder info so we can unrm
