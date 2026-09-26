@@ -494,10 +494,10 @@ int nextReminderFromArgs(NSMutableArray<NSString*> *args, EKReminder **reminderR
                 if (pastAlarms.count>1 || (pastAlarms.count && !futureAlarms.count) || allowSnoozeFutureReminder)
                     return YES;
             } else {
-            // old logic that worked okay in Mojave
-            if (reminder.isSnoozed) return YES; // never happens in Catalina
-            if (!reminder.hasAlarms) return NO;
-            if ([reminder hasUnsnoozedPastAlarms]) return YES;
+                // old logic that worked okay in Mojave
+                if (reminder.isSnoozed) return YES; // never happens in Catalina
+                if (!reminder.hasAlarms) return NO;
+                if ([reminder hasUnsnoozedPastAlarms]) return YES;
             }
             return NO;
         }];
@@ -1527,15 +1527,15 @@ static int snoozeReminder(EKReminder *reminder, NSUInteger reminder_id, NSString
         // [reminder addAlarm:[EKAlarm alarmWithAbsoluteDate:[NSDate dateWithTimeIntervalSinceNow:500]]];
 
     } else {
-    // old version
-    NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
-    EKAlarm *alarmToSnooze;
-    BOOL deleteAlarmToSnooze = NO;
-    if ((extraneousAlarmsButWillNotDelete=[reminder snoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
-        // snooze the most recent of these alarms (do not delete the others)
-        alarmToSnooze = [EKAlarm latestAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
-        deleteAlarmToSnooze = YES;
-        // get here for snoozed reminders in Mojave but not in Catalina
+        // old version
+        NSArray<EKAlarm*> *extraneousAlarmsButWillNotDelete;
+        EKAlarm *alarmToSnooze;
+        BOOL deleteAlarmToSnooze = NO;
+        if ((extraneousAlarmsButWillNotDelete=[reminder snoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
+            // snooze the most recent of these alarms (do not delete the others)
+            alarmToSnooze = [EKAlarm latestAlarmFromArray:extraneousAlarmsButWillNotDelete forReminder:reminder];
+            deleteAlarmToSnooze = YES;
+            // get here for snoozed reminders in Mojave but not in Catalina
     }
     if (!alarmToSnooze && (extraneousAlarmsButWillNotDelete=[reminder unsnoozedPastAlarms]) && extraneousAlarmsButWillNotDelete.count) {
         // snooze the most recent of these
